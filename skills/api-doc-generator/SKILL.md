@@ -28,7 +28,11 @@ Turn one backend endpoint's source into a factual API document for technical and
 2. **Choose scope.** Find the endpoints in the target. If there is exactly one, document it. If there are several and the user did not name one, ask which one, or whether to document all of them. Each JSON file holds exactly one endpoint; for "all", write one file per endpoint named `<target-name>-<handler>`.
 3. **Check for existing output.** If `<PROJECT_ROOT>/docs/<target-name>.json` or `.docx` already exists, ask before overwriting.
 4. **Install dependencies** if `<RUNTIME_ROOT>/node_modules/docx` does not exist: `node <RUNTIME_ROOT>/scripts/init.mjs`.
-5. **Analyze the source.** Start at the route handler and follow direct imports it needs: service, DTO, repository/entity, HTTP clients, guards. Skip `node_modules`, build output, generated code, and unrelated modules. If the endpoint proxies to another service whose code is available, follow it; otherwise record where the analysis stops.
+5. **Analyze the source — inside `PROJECT_ROOT` only.** Start at the route handler and follow the direct imports it needs: service, DTO, repository/entity, HTTP client, and the guards/pipes/interceptors applied to it. Skip `node_modules`, build output, generated code, and unrelated modules.
+   - **Do not open other repositories**, even sibling checkouts of the downstream services. A downstream HTTP call is documented from the caller's side: URL, method, parameters sent, fields read from the response, and what happens on failure. Note in the document that the downstream's internals were not analyzed.
+   - **Do not read deployment or infrastructure config** (helm, k8s, terraform, CI, `.env` files). If behavior depends on an env var (e.g. a guard toggled by `USE_GUARDS`), document the condition as written in code.
+   - Only go beyond these limits if the user explicitly asks.
+   - For several endpoints in one module, trace the shared pieces (guards, interceptors, error types, HTTP client) once and reuse them for every endpoint's document.
 6. **Write** `<PROJECT_ROOT>/docs/<target-name>.json` following the spec and example. Fill metadata with the defaults in the spec.
 7. **Validate:**
 

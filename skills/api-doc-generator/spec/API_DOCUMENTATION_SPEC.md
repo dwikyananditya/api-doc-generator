@@ -32,7 +32,7 @@ Source code adalah satu-satunya sumber fakta. Jangan mengisi detail yang tidak d
 1. Terima file atau folder source dan identifikasi endpoint yang diminta.
 2. Tentukan root aplikasi, bukan folder feature atau module: ancestor terdekat dari target yang memiliki manifest project (`package.json`, `go.mod`, `*.csproj`, `*.sln`, `Cargo.toml`) dan tidak berada di luar root git. Jika tidak ada manifest, gunakan root git. Pada monorepo, hasilnya adalah folder aplikasi (mis. `apps/api`), bukan root monorepo.
 3. Ikuti import dan dependency langsung yang dibutuhkan endpoint tersebut.
-4. Jika target adalah proxy/gateway, ikuti kontrak downstream yang tersedia dalam scope bila diperlukan untuk memahami behavior.
+4. Batas analisis adalah `PROJECT_ROOT`. Jangan membuka repository lain (termasuk service downstream) atau konfigurasi deployment (helm, k8s, CI, `.env`). Pemanggilan ke service lain didokumentasikan dari sisi pemanggil: URL, method, parameter yang dikirim, field respons yang dipakai, dan efek jika gagal; catat bahwa internal service downstream tidak dianalisis.
 5. Buat `<PROJECT_ROOT>/docs/<target-name>.json` sesuai schema.
 6. Validasi JSON.
 7. Render JSON menjadi `<PROJECT_ROOT>/docs/<target-name>.docx`.
