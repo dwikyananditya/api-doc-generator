@@ -1,6 +1,8 @@
 # API Documentation Specification
 
-> **WAJIB:** Semua output dokumentasi harus ditulis dalam **Bahasa Indonesia** dan dapat dipahami pembaca non-teknis. Format utama: `.docx` kompatibel dengan Google Docs | Runtime: Node.js | Library: `docx@9.x`
+> **WAJIB:** Semua isi dokumentasi (nilai teks di JSON) ditulis dalam **Bahasa Indonesia** dan dapat dipahami pembaca non-teknis. Key JSON tetap memakai nama dari schema.
+>
+> Contoh lengkap yang lolos validasi: `spec/example-api-document.json`. Aturan visual DOCX ada di `spec/DOCX_RENDERING_SPEC.md` dan hanya relevan untuk maintainer renderer.
 
 ## Bahasa dan pembaca
 
@@ -28,13 +30,13 @@ Source code adalah satu-satunya sumber fakta. Jangan mengisi detail yang tidak d
 ## Alur kerja
 
 1. Terima file atau folder source dan identifikasi endpoint yang diminta.
-2. Tentukan root project dari repository/aplikasi, bukan dari folder feature atau module. Cari ancestor terdekat yang memiliki `.git`; jika tidak ada, gunakan ancestor dengan manifest project seperti `package.json`, `go.mod`, `*.csproj`, `*.sln`, atau `Cargo.toml`.
+2. Tentukan root aplikasi, bukan folder feature atau module: ancestor terdekat dari target yang memiliki manifest project (`package.json`, `go.mod`, `*.csproj`, `*.sln`, `Cargo.toml`) dan tidak berada di luar root git. Jika tidak ada manifest, gunakan root git. Pada monorepo, hasilnya adalah folder aplikasi (mis. `apps/api`), bukan root monorepo.
 3. Ikuti import dan dependency langsung yang dibutuhkan endpoint tersebut.
 4. Jika target adalah proxy/gateway, ikuti kontrak downstream yang tersedia dalam scope bila diperlukan untuk memahami behavior.
 5. Buat `<PROJECT_ROOT>/docs/<target-name>.json` sesuai schema.
 6. Validasi JSON.
 7. Render JSON menjadi `<PROJECT_ROOT>/docs/<target-name>.docx`.
-8. Validasi file hasil render.
+8. Pastikan file DOCX ada dan tidak kosong.
 
 Abaikan `node_modules`, build output, generated files, vendor, coverage, dan source yang tidak terkait endpoint.
 
@@ -90,7 +92,7 @@ Jelaskan langkah proses sesuai urutan source. Untuk setiap langkah jelaskan tind
 
 Jika ada beberapa aturan validasi, gunakan tabel `Rule | Failure condition | Error | Business effect`.
 
-Jika ada dua atau lebih write operation tanpa transaction wrapper, tandai sebagai risiko amber.
+Jika ada dua atau lebih write operation tanpa transaction wrapper, tandai sebagai risiko red (lihat tabel severity di Section 7).
 
 ### 3. System interaction
 
@@ -128,7 +130,7 @@ Section ini hanya berisi behavior yang benar-benar ditangani source saat ini.
 
 Tabel: `Handled condition | Error message | Source location | HTTP response`.
 
-Masukkan hanya exception eksplisit seperti `BadRequestException` atau `NotFoundException`.
+Masukkan hanya error eksplisit yang menghasilkan respons 4xx, misalnya NestJS `throw new BadRequestException(...)`, Go `http.Error(w, msg, http.StatusBadRequest)`, atau .NET `return NotFound(...)`.
 
 #### 6.2 Fallback values
 
@@ -162,7 +164,7 @@ Severity:
 
 ### 8. Improvement recommendations
 
-Buat minimal lima rekomendasi jika relevan dan urutkan dari paling kritis. Setiap rekomendasi berisi masalah saat ini, solusi konkret, dan contoh code bila membantu.
+Buat minimal satu rekomendasi dan hingga lima atau lebih bila didukung bukti source; jangan menambah rekomendasi generik hanya untuk mencapai jumlah tertentu. Urutkan dari paling kritis (`priority` 1 = paling kritis). Setiap rekomendasi berisi masalah saat ini, solusi konkret, dan contoh code bila membantu.
 
 Evaluasi topik berikut berdasarkan bukti source:
 
@@ -209,68 +211,30 @@ File `<PROJECT_ROOT>/docs/<target-name>.json` wajib memiliki bentuk dasar beriku
 }
 ```
 
-Gunakan `schema/api-document.schema.json` untuk validasi struktur minimum. Gunakan nama folder target sebagai `<target-name>`; untuk target berupa file, gunakan nama file tanpa ekstensi. `PROJECT_ROOT` adalah root aplikasi/repository, bukan folder `src/modules/...` tempat source berada.
+Gunakan `schema/api-document.schema.json` untuk validasi struktur minimum. Gunakan nama folder target sebagai `<target-name>`; untuk target berupa file, gunakan nama file tanpa ekstensi. Satu file JSON berisi tepat satu endpoint; jika semua endpoint dalam target didokumentasikan, buat satu file per endpoint dengan nama `<target-name>-<handler>`. `PROJECT_ROOT` adalah root aplikasi/repository, bukan folder `src/modules/...` tempat source berada.
+### Metadata
 
-## Spesifikasi visual DOCX
+Metadata tidak berasal dari source, jadi gunakan nilai default berikut kecuali pengguna memberi nilai lain:
 
-### Warna
+| Field            | Nilai                                                                 |
+| ---------------- | --------------------------------------------------------------------- |
+| `documentName`   | `Dokumentasi API <METHOD> <url>`                                      |
+| `service`        | nama aplikasi dari manifest (`name` di `package.json`, module di `go.mod`, nama project `.csproj`) |
+| `version`        | `1.0`                                                                 |
+| `date`           | tanggal hari ini, format `YYYY-MM-DD`                                 |
+| `author`         | hasil `git config user.name`; jika kosong, `Tidak diketahui`          |
+| `status`         | `Draft`                                                               |
+| `classification` | `Internal`                                                            |
 
-| Token      | Hex                 | Pemakaian            |
-| ---------- | ------------------- | -------------------- |
-| `darkBg`   | `1A1A2E`            | code block           |
-| `blue`     | `185FA5`            | H2, border, info     |
-| `darkBlue` | `2C3E50`            | H1, H3, table header |
-| `bodyText` | `1A1A2E`            | body                 |
-| `rowOdd`   | `F2F4F6`            | zebra table          |
-| `red`      | `A32D2D` / `FCEBEB` | critical             |
-| `amber`    | `BA7517` / `FAEEDA` | medium risk          |
-| `green`    | `3B6D11` / `EAF3DE` | correct behavior     |
-| `info`     | `185FA5` / `E6F1FB` | information          |
-| `purple`   | `534AB7` / `EEEDFE` | recommendation       |
+### Nilai yang tidak ditemukan
 
-### Typography
-
-| Element      | Font        | Size | Style                          |
-| ------------ | ----------- | ---- | ------------------------------ |
-| H1           | Arial       | 32   | bold, dark blue, bottom border |
-| H2           | Arial       | 28   | bold, blue                     |
-| H3           | Arial       | 24   | bold, dark blue                |
-| Body         | Arial       | 22   | normal                         |
-| Table header | Arial       | 20   | bold, white on dark blue       |
-| Table cell   | Arial       | 20   | normal                         |
-| Inline code  | Courier New | 20   | `C7254E` on `F9F2F4`           |
-| Code block   | Courier New | 19   | dark background                |
-| Badge        | Arial       | 18   | bold                           |
-
-### Page setup
-
-Use US Letter explicitly in both Word sections:
-
-```js
-const page = {
-  size: { width: 12240, height: 15840 },
-  margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
-};
-```
-
-## DOCX implementation rules
-
-1. Use `WidthType.DXA`, never percentage widths.
-2. Use `ShadingType.CLEAR`, never solid shading.
-3. Use numbering with `LevelFormat.BULLET`, never hardcoded bullet characters.
-4. Use `tabStops` for header and footer alignment, never tables there.
-5. Gunakan page break hanya bila perpindahan konten memang memerlukannya; jangan memaksa setiap section ke halaman baru.
-6. Use separate paragraphs instead of `\n` inside `TextRun`.
-7. Make `columnWidths` sum exactly to the table width.
-8. Set `width` on every `TableCell` as well as its table column.
-9. Set page size explicitly; `docx` defaults are not US Letter.
-10. Validate the generated DOCX after rendering.
+Field wajib yang tidak dapat diisi dari source ditulis sebagai kalimat faktual, bukan `null` atau placeholder, misalnya `Tidak ada (endpoint tidak menerima query)` untuk `queryDto` atau `Tidak ditemukan pengecekan autentikasi di source yang dianalisis` untuk `auth`. Untuk daftar yang memang kosong, gunakan array kosong.
 
 ## Section 6 boundary
 
 Section 6 documents only implemented behavior:
 
-- explicit `BadRequestException` or `NotFoundException` belongs in 6.1
+- explicit 4xx errors (e.g. `BadRequestException`, `http.Error(..., 400)`, `return NotFound()`) belong in 6.1
 - ternary or default fallback belongs in 6.2
 - catch and rethrow behavior belongs in 6.3
 - missing handling belongs in Section 7

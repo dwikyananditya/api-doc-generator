@@ -1,52 +1,57 @@
 ---
 name: api-doc-generator
-description: Generate factual API documentation from a backend source file or folder and render it as DOCX. Use when the user invokes `/api-doc-generator`, asks to document an API endpoint, or wants backend source converted into API documentation.
-compatibility: Node.js runtime and local filesystem access. No office suite required.
+description: Analyze a backend endpoint's source (NestJS, Node.js, Go, or .NET) and produce an Indonesian-language DOCX report covering request fields, business flow, system and database interactions, error handling, risks, and improvement recommendations. Use when the user invokes the api-doc-generator skill (e.g. `/api-doc-generator <path>`) or asks for an API documentation document/report of an endpoint from its source code. Not for OpenAPI/Swagger specs, README files, or inline code comments.
+compatibility: Node.js plus bun, pnpm, or npm to install the `docx` dependency. No office suite required.
 ---
 
 # API doc generator
 
-Generate the requested API documentation from source code for both technical and non-technical readers. Read `spec/API_DOCUMENTATION_SPEC.md` before starting; it is the source of truth for output language, evidence, JSON structure, audience, and document layout.
+Turn one backend endpoint's source into a factual API document for technical and non-technical readers. You write a JSON file; the bundled scripts validate it and render the DOCX.
 
-## Input
+**All text values in the JSON must be written in Bahasa Indonesia.** Keep technical identifiers (class, method, field, env var, HTTP method) in their original form and explain them in plain language.
 
-```text
-/api-doc-generator path/to/target
-/api-doc-generator path/to/target --format docx
-```
+`RUNTIME_ROOT` is this skill's directory. Run scripts with absolute paths, e.g. `node <RUNTIME_ROOT>/scripts/validate.mjs`.
 
-The default format is `docx`. If the target contains multiple endpoints and the user has not specified a scope, ask whether to document one endpoint or all endpoints.
+## References
+
+- `spec/API_DOCUMENTATION_SPEC.md` — content rules for every section, severity levels, metadata defaults. Read it before writing JSON.
+- `spec/example-api-document.json` — a complete, valid document. Match its shapes and level of detail.
+- `schema/api-document.schema.json` — the structural contract the validator enforces.
+- `spec/DOCX_RENDERING_SPEC.md` — renderer styling only. Do not read it unless changing `scripts/generate.mjs`.
 
 ## Workflow
 
-Use the skill directory as `RUNTIME_ROOT`.
-
-1. Read `spec/API_DOCUMENTATION_SPEC.md`.
-2. Resolve the source as `TARGET_ROOT` and derive `<target-name>` from its folder name or filename.
-3. Resolve `PROJECT_ROOT` as the application/repository root, not the source module folder. Prefer the nearest ancestor containing `.git`; otherwise use the nearest ancestor containing a project manifest such as `package.json`, `go.mod`, `*.csproj`, `*.sln`, or `Cargo.toml`.
-4. Run `node scripts/init.mjs` from `RUNTIME_ROOT` when dependencies are missing.
-5. Inspect the target source directly and write `<PROJECT_ROOT>/docs/<target-name>.json` according to `schema/api-document.schema.json` and the spec. Do not create the documentation folder inside `src/`, a feature/module folder, or the source target unless that folder is itself the project root.
-6. Validate the JSON:
-
-   ```sh
-   node scripts/validate.mjs <PROJECT_ROOT>/docs/<target-name>.json
-   ```
-
-7. Generate the DOCX document:
+1. **Resolve paths.**
+   - `TARGET_ROOT`: the file or folder the user gave.
+   - `<target-name>`: the folder name, or the filename without extension.
+   - `PROJECT_ROOT`: the nearest ancestor of the target with a project manifest (`package.json`, `go.mod`, `*.csproj`, `*.sln`, `Cargo.toml`) that is inside the git root; fall back to the git root. In a monorepo this is the app folder (e.g. `apps/api`), never `src/` or a feature module.
+2. **Choose scope.** Find the endpoints in the target. If there is exactly one, document it. If there are several and the user did not name one, ask which one, or whether to document all of them. Each JSON file holds exactly one endpoint; for "all", write one file per endpoint named `<target-name>-<handler>`.
+3. **Check for existing output.** If `<PROJECT_ROOT>/docs/<target-name>.json` or `.docx` already exists, ask before overwriting.
+4. **Install dependencies** if `<RUNTIME_ROOT>/node_modules/docx` does not exist: `node <RUNTIME_ROOT>/scripts/init.mjs`.
+5. **Analyze the source.** Start at the route handler and follow direct imports it needs: service, DTO, repository/entity, HTTP clients, guards. Skip `node_modules`, build output, generated code, and unrelated modules. If the endpoint proxies to another service whose code is available, follow it; otherwise record where the analysis stops.
+6. **Write** `<PROJECT_ROOT>/docs/<target-name>.json` following the spec and example. Fill metadata with the defaults in the spec.
+7. **Validate:**
 
    ```sh
-   node scripts/generate.mjs <PROJECT_ROOT>/docs/<target-name>.json <PROJECT_ROOT>/docs/<target-name>.docx
+   node <RUNTIME_ROOT>/scripts/validate.mjs <PROJECT_ROOT>/docs/<target-name>.json
    ```
 
-8. Report the source target, project root, JSON path, output path, format, validation result, and unresolved facts.
+   If it fails, fix the JSON and validate again. Do not render invalid JSON.
+8. **Render:**
 
-## Boundaries
+   ```sh
+   node <RUNTIME_ROOT>/scripts/generate.mjs <PROJECT_ROOT>/docs/<target-name>.json <PROJECT_ROOT>/docs/<target-name>.docx
+   ```
 
-- Inspect only source related to the requested endpoint. Perform source inspection directly; no inventory script is required.
-- Treat source code as the factual authority.
-- Prefer language that readers unfamiliar with NestJS, DTOs, decorators, RxJS, or database terminology can understand. Add business context when it helps; technical details may still be retained.
-- Decorators and source identifiers may be included when relevant. When a field or behavior is intended for a general audience, consider adding a short explanation so the code is not the only context.
-- When using `notDetected`, consider adding context about the limits of the analyzed source. Do not change facts merely to remove a technical marker.
-- Follow an available downstream contract when it is needed to understand a proxy target. If it is unavailable, record the analysis boundary without forcing a conclusion.
-- Stop before rendering if JSON validation fails.
-- Do not overwrite an existing output without checking the user's intent.
+   Confirm the DOCX exists and is not empty.
+9. **Report** the target, project root, JSON and DOCX paths, validation result, and any facts that could not be determined from source.
+
+## Rules
+
+- Source code is the only source of facts. Never infer authentication, status codes, transactions, retries, or constraints without evidence in source; cite the file and symbol.
+- Keep implemented behavior (Sections 1–6), risks (Section 7), and recommendations (Section 8) separate. Missing error handling is a risk, not an error-handling entry.
+- Every request field gets a plain-language name, type, whether it is required, its fill rule, and its business meaning, with the source reference kept in `source`.
+- Every section explains what the behavior means for the user or the business process, not just which classes are called.
+- When a required value cannot be found, write a factual sentence (e.g. `Tidak ditemukan pengecekan autentikasi di source yang dianalisis`), never `null` or a made-up value. Use an empty array when a list genuinely has no entries.
+- Do not pad recommendations or risks to reach a count. One well-supported item beats five generic ones.
+- If the target contains no HTTP endpoint, or the route cannot be traced to a handler, stop and tell the user what was found instead of producing a partial document.
