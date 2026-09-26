@@ -29,9 +29,9 @@ Source code adalah satu-satunya sumber fakta. Jangan mengisi detail yang tidak d
 
 ## Alur kerja
 
-1. Terima file atau folder source dan identifikasi endpoint yang diminta.
+1. Terima file atau folder source dan identifikasi semua endpoint di dalamnya, termasuk di semua subfolder/sub-module (atau hanya endpoint yang disebut pengguna). Satu target menghasilkan tepat satu JSON dan satu DOCX, sebanyak apa pun module di dalamnya; urutkan endpoint per module/subfolder.
 2. Tentukan root aplikasi, bukan folder feature atau module: ancestor terdekat dari target yang memiliki manifest project (`package.json`, `go.mod`, `*.csproj`, `*.sln`, `Cargo.toml`) dan tidak berada di luar root git. Jika tidak ada manifest, gunakan root git. Pada monorepo, hasilnya adalah folder aplikasi (mis. `apps/api`), bukan root monorepo.
-3. Ikuti import dan dependency langsung yang dibutuhkan endpoint tersebut.
+3. Ikuti import dan dependency langsung yang dibutuhkan setiap endpoint. Bagian yang dipakai bersama (guard, interceptor, error type, HTTP client) cukup dianalisis sekali.
 4. Batas analisis adalah `PROJECT_ROOT`. Jangan membuka repository lain (termasuk service downstream) atau konfigurasi deployment (helm, k8s, CI, `.env`). Pemanggilan ke service lain didokumentasikan dari sisi pemanggil: URL, method, parameter yang dikirim, field respons yang dipakai, dan efek jika gagal; catat bahwa internal service downstream tidak dianalisis.
 5. Buat `<PROJECT_ROOT>/docs/<target-name>.json` sesuai schema.
 6. Validasi JSON.
@@ -53,7 +53,7 @@ Abaikan `node_modules`, build output, generated files, vendor, coverage, dan sou
 
 ## Struktur dokumen
 
-Dokumen terdiri dari cover page dan sembilan section. Cover page memakai Word section terpisah; section konten mengalir secara compact tanpa page break paksa agar tidak menghasilkan area kosong.
+Dokumen terdiri dari cover page, lalu satu bab per endpoint. Setiap bab diawali tabel detail endpoint dan berisi sembilan section berikut. Cover page memakai Word section terpisah; section konten mengalir secara compact tanpa page break paksa agar tidak menghasilkan area kosong.
 
 ### Cover page
 
@@ -61,8 +61,9 @@ Tampilkan:
 
 - `API DOCUMENTATION`
 - nama service
-- method, URL, dan nama function
-- tabel metadata: document name, endpoint, service, version, date, author, status, classification
+- nama dokumen
+- tabel metadata: document name, service, version, date, author, status, classification
+- daftar endpoint: nomor, method, URL, nama function
 - `CONFIDENTIAL — Internal Engineering Use Only`
 
 ### 1. Endpoint overview
@@ -196,29 +197,36 @@ File `<PROJECT_ROOT>/docs/<target-name>.json` wajib memiliki bentuk dasar beriku
 ```json
 {
   "metadata": {},
-  "endpoint": {},
-  "sections": {
-    "overview": {},
-    "businessProcess": {},
-    "systemInteraction": {},
-    "database": {},
-    "externalApis": [],
-    "errorHandling": {},
-    "risks": [],
-    "recommendations": [],
-    "response": {}
-  }
+  "endpoints": [
+    {
+      "endpoint": { "method": "", "url": "", "aliases": [] },
+      "sections": {
+        "overview": {},
+        "businessProcess": {},
+        "systemInteraction": {},
+        "database": {},
+        "externalApis": [],
+        "errorHandling": {},
+        "risks": [],
+        "recommendations": [],
+        "response": {}
+      }
+    }
+  ]
 }
 ```
 
-Gunakan `schema/api-document.schema.json` untuk validasi struktur minimum. Gunakan nama folder target sebagai `<target-name>`; untuk target berupa file, gunakan nama file tanpa ekstensi. Satu file JSON berisi tepat satu endpoint; jika semua endpoint dalam target didokumentasikan, buat satu file per endpoint dengan nama `<target-name>-<handler>`. `PROJECT_ROOT` adalah root aplikasi/repository, bukan folder `src/modules/...` tempat source berada.
+Handler yang sama yang diekspos di beberapa route (misalnya `/capaian/...` dan `/web/capaian/...`) ditulis sebagai satu item; route lainnya dicatat di `endpoint.aliases` (contoh: `"GET /web/capaian/option-tanggal"`).
+
+Gunakan `schema/api-document.schema.json` untuk validasi struktur minimum. Gunakan nama folder target sebagai `<target-name>`; untuk target berupa file, gunakan nama file tanpa ekstensi. Satu target menghasilkan tepat satu file JSON dan satu DOCX berisi semua endpoint; jangan memecah output per endpoint. `PROJECT_ROOT` adalah root aplikasi/repository, bukan folder `src/modules/...` tempat source berada.
+
 ### Metadata
 
 Metadata tidak berasal dari source, jadi gunakan nilai default berikut kecuali pengguna memberi nilai lain:
 
 | Field            | Nilai                                                                 |
 | ---------------- | --------------------------------------------------------------------- |
-| `documentName`   | `Dokumentasi API <METHOD> <url>`                                      |
+| `documentName`   | `Dokumentasi API <target-name>`                                       |
 | `service`        | nama aplikasi dari manifest (`name` di `package.json`, module di `go.mod`, nama project `.csproj`) |
 | `version`        | `1.0`                                                                 |
 | `date`           | tanggal hari ini, format `YYYY-MM-DD`                                 |

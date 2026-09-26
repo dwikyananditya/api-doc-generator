@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "documentName": "Dokumentasi API GET /orders/:id",
+    "documentName": "Dokumentasi API orders",
     "service": "order-service",
     "version": "1.0",
     "date": "2026-09-26",
@@ -8,193 +8,244 @@
     "status": "Draft",
     "classification": "Internal"
   },
-  "endpoint": {
-    "method": "GET",
-    "url": "/orders/:id",
-    "functionName": "findOne",
-    "controller": "OrdersController (src/orders/orders.controller.ts)",
-    "serviceMethod": "OrdersService.findOne (src/orders/orders.service.ts)",
-    "auth": "Wajib login: guard `JwtAuthGuard` dipasang di level controller, sehingga request tanpa token JWT yang valid ditolak.",
-    "contentType": "application/json",
-    "successStatus": 200
-  },
-  "sections": {
-    "overview": {
-      "controller": "OrdersController — menangani permintaan terkait pesanan pelanggan.",
-      "routePrefix": "/orders",
-      "endpoints": [
-        {
-          "method": "GET",
-          "path": "/orders/:id",
-          "handler": "findOne",
-          "queryDto": "FindOrderQueryDto"
-        }
-      ],
-      "requestFields": [
-        {
-          "field": "id (ID pesanan)",
-          "type": "Teks berformat UUID",
-          "required": true,
-          "validation": "Harus UUID yang valid; jika tidak, request langsung ditolak dengan status 400.",
-          "source": "Path parameter, `@Param('id', ParseUUIDPipe)` di orders.controller.ts:18",
-          "businessMeaning": "Menentukan pesanan mana yang ingin dilihat pelanggan."
-        },
-        {
-          "field": "includeItems (tampilkan daftar barang)",
-          "type": "Ya/tidak (boolean)",
-          "required": false,
-          "validation": "Opsional; jika tidak dikirim dianggap `false`.",
-          "source": "Query parameter, `FindOrderQueryDto.includeItems` dengan `@IsOptional() @IsBoolean()`",
-          "businessMeaning": "Jika `true`, respons juga memuat daftar barang dalam pesanan sehingga aplikasi tidak perlu request tambahan."
-        }
-      ]
-    },
-    "businessProcess": {
-      "steps": [
-        "Sistem memastikan pengguna sudah login dan ID pesanan berformat benar. Jika tidak, permintaan ditolak sebelum data apa pun dibaca.",
-        "Sistem mengambil data pesanan dari database berdasarkan ID. Jika pesanan tidak ada, pengguna menerima pesan 'Order not found' (404).",
-        "Sistem memanggil customer-service untuk mengambil nama dan email pelanggan agar respons dapat menampilkan pemilik pesanan.",
-        "Jika `includeItems` bernilai `true`, sistem mengambil daftar barang pesanan dari database.",
-        "Sistem menggabungkan data pesanan, data pelanggan, dan (opsional) daftar barang menjadi satu respons."
-      ],
-      "failureBehavior": "Jika customer-service tidak dapat dihubungi, error tidak ditangkap sehingga seluruh permintaan gagal dengan status 500, walaupun data pesanan sendiri berhasil dibaca."
-    },
-    "systemInteraction": {
-      "services": [
-        {
-          "service": "order-service",
-          "environmentVariable": "-",
-          "role": "Service yang didokumentasikan; pemilik data pesanan",
-          "type": "internal"
-        },
-        {
-          "service": "customer-service",
-          "environmentVariable": "CUSTOMER_SERVICE_URL",
-          "role": "Penyedia data profil pelanggan",
-          "type": "internal"
-        },
-        {
-          "service": "PostgreSQL",
-          "environmentVariable": "DATABASE_URL",
-          "role": "Penyimpanan data pesanan dan barang pesanan",
-          "type": "internal"
-        }
-      ],
-      "sequence": "Client -> OrdersController: GET /orders/:id\nOrdersController -> OrdersService: findOne(id, query)\nOrdersService -> PostgreSQL: SELECT orders WHERE id\nOrdersService -> customer-service: GET /customers/:customerId\n[jika includeItems] OrdersService -> PostgreSQL: SELECT order_items WHERE order_id\nOrdersService -> Client: 200 OK",
-      "communication": [
-        {
-          "from": "order-service",
-          "to": "PostgreSQL",
-          "operation": "Baca pesanan",
-          "purpose": "Mengambil data pesanan yang diminta"
-        },
-        {
-          "from": "order-service",
-          "to": "customer-service",
-          "operation": "HTTP GET /customers/:customerId (berurutan, setelah baca pesanan)",
-          "purpose": "Melengkapi respons dengan data pelanggan; bergantung pada `customerId` dari pesanan"
-        }
-      ]
-    },
-    "database": {
-      "read": [
-        {
-          "table": "orders",
-          "operation": "findOne (TypeORM)",
-          "lookupKey": "id",
-          "businessPurpose": "Mengambil data utama pesanan"
-        },
-        {
-          "table": "order_items",
-          "operation": "find (TypeORM), hanya jika includeItems = true",
-          "lookupKey": "order_id",
-          "businessPurpose": "Mengambil daftar barang dalam pesanan"
-        }
-      ],
-      "write": []
-    },
-    "externalApis": [
-      {
-        "endpoint": "${CUSTOMER_SERVICE_URL}/customers/:customerId",
+  "endpoints": [
+    {
+      "endpoint": {
         "method": "GET",
-        "query": "Tidak ada",
-        "execution": "Berurutan, setelah pesanan ditemukan",
-        "purpose": "Mengambil nama dan email pelanggan pemilik pesanan",
-        "fieldsUsed": "name, email",
-        "failureEffect": "Seluruh permintaan gagal dengan 500; tidak ada retry atau timeout khusus"
-      }
-    ],
-    "errorHandling": {
-      "businessRuleValidation": [
-        {
-          "handledCondition": "Pesanan dengan ID tersebut tidak ada",
-          "errorMessage": "Order not found",
-          "sourceLocation": "orders.service.ts:27",
-          "httpResponse": "404 Not Found"
+        "url": "/orders/:id",
+        "functionName": "findOne",
+        "controller": "OrdersController (src/orders/orders.controller.ts)",
+        "serviceMethod": "OrdersService.findOne (src/orders/orders.service.ts)",
+        "auth": "Wajib login: guard `JwtAuthGuard` dipasang di level controller, sehingga request tanpa token JWT yang valid ditolak.",
+        "contentType": "application/json",
+        "successStatus": 200,
+        "aliases": [
+          "GET /web/orders/:id"
+        ]
+      },
+      "sections": {
+        "overview": {
+          "controller": "OrdersController — menangani permintaan terkait pesanan pelanggan.",
+          "routePrefix": "/orders",
+          "endpoints": [
+            {
+              "method": "GET",
+              "path": "/orders/:id",
+              "handler": "findOne",
+              "queryDto": "FindOrderQueryDto"
+            }
+          ],
+          "requestFields": [
+            {
+              "field": "id (ID pesanan)",
+              "type": "Teks berformat UUID",
+              "required": true,
+              "validation": "Harus UUID yang valid; jika tidak, request langsung ditolak dengan status 400.",
+              "source": "Path parameter, `@Param('id', ParseUUIDPipe)` di orders.controller.ts:18",
+              "businessMeaning": "Menentukan pesanan mana yang ingin dilihat pelanggan."
+            },
+            {
+              "field": "includeItems (tampilkan daftar barang)",
+              "type": "Ya/tidak (boolean)",
+              "required": false,
+              "validation": "Opsional; jika tidak dikirim dianggap `false`.",
+              "source": "Query parameter, `FindOrderQueryDto.includeItems` dengan `@IsOptional() @IsBoolean()`",
+              "businessMeaning": "Jika `true`, respons juga memuat daftar barang dalam pesanan sehingga aplikasi tidak perlu request tambahan."
+            }
+          ]
+        },
+        "businessProcess": {
+          "steps": [
+            "Sistem memastikan pengguna sudah login dan ID pesanan berformat benar. Jika tidak, permintaan ditolak sebelum data apa pun dibaca.",
+            "Sistem mengambil data pesanan dari database berdasarkan ID. Jika pesanan tidak ada, pengguna menerima pesan 'Order not found' (404).",
+            "Sistem memanggil customer-service untuk mengambil nama dan email pelanggan agar respons dapat menampilkan pemilik pesanan.",
+            "Jika `includeItems` bernilai `true`, sistem mengambil daftar barang pesanan dari database.",
+            "Sistem menggabungkan data pesanan, data pelanggan, dan (opsional) daftar barang menjadi satu respons."
+          ],
+          "failureBehavior": "Jika customer-service tidak dapat dihubungi, error tidak ditangkap sehingga seluruh permintaan gagal dengan status 500, walaupun data pesanan sendiri berhasil dibaca."
+        },
+        "systemInteraction": {
+          "services": [
+            {
+              "service": "order-service",
+              "environmentVariable": "-",
+              "role": "Service yang didokumentasikan; pemilik data pesanan",
+              "type": "internal"
+            },
+            {
+              "service": "customer-service",
+              "environmentVariable": "CUSTOMER_SERVICE_URL",
+              "role": "Penyedia data profil pelanggan",
+              "type": "internal"
+            },
+            {
+              "service": "PostgreSQL",
+              "environmentVariable": "DATABASE_URL",
+              "role": "Penyimpanan data pesanan dan barang pesanan",
+              "type": "internal"
+            }
+          ],
+          "sequence": "Client -> OrdersController: GET /orders/:id\nOrdersController -> OrdersService: findOne(id, query)\nOrdersService -> PostgreSQL: SELECT orders WHERE id\nOrdersService -> customer-service: GET /customers/:customerId\n[jika includeItems] OrdersService -> PostgreSQL: SELECT order_items WHERE order_id\nOrdersService -> Client: 200 OK",
+          "communication": [
+            {
+              "from": "order-service",
+              "to": "PostgreSQL",
+              "operation": "Baca pesanan",
+              "purpose": "Mengambil data pesanan yang diminta"
+            },
+            {
+              "from": "order-service",
+              "to": "customer-service",
+              "operation": "HTTP GET /customers/:customerId (berurutan, setelah baca pesanan)",
+              "purpose": "Melengkapi respons dengan data pelanggan; bergantung pada `customerId` dari pesanan"
+            }
+          ]
+        },
+        "database": {
+          "read": [
+            {
+              "table": "orders",
+              "operation": "findOne (TypeORM)",
+              "lookupKey": "id",
+              "businessPurpose": "Mengambil data utama pesanan"
+            },
+            {
+              "table": "order_items",
+              "operation": "find (TypeORM), hanya jika includeItems = true",
+              "lookupKey": "order_id",
+              "businessPurpose": "Mengambil daftar barang dalam pesanan"
+            }
+          ],
+          "write": []
+        },
+        "externalApis": [
+          {
+            "endpoint": "${CUSTOMER_SERVICE_URL}/customers/:customerId",
+            "method": "GET",
+            "query": "Tidak ada",
+            "execution": "Berurutan, setelah pesanan ditemukan",
+            "purpose": "Mengambil nama dan email pelanggan pemilik pesanan",
+            "fieldsUsed": "name, email",
+            "failureEffect": "Seluruh permintaan gagal dengan 500; tidak ada retry atau timeout khusus"
+          }
+        ],
+        "errorHandling": {
+          "businessRuleValidation": [
+            {
+              "handledCondition": "Pesanan dengan ID tersebut tidak ada",
+              "errorMessage": "Order not found",
+              "sourceLocation": "orders.service.ts:27",
+              "httpResponse": "404 Not Found"
+            }
+          ],
+          "fallbackValues": [
+            {
+              "condition": "`includeItems` tidak dikirim",
+              "mechanism": "Default value di DTO (`includeItems = false`)",
+              "fallbackValue": "false",
+              "processEffect": "Daftar barang tidak diambil dan tidak ada di respons"
+            }
+          ],
+          "generalPropagation": [],
+          "unhandled": "Kegagalan pemanggilan customer-service tidak ditangani di source; analisis dampaknya ada di Section 7."
+        },
+        "risks": [
+          {
+            "severity": "amber",
+            "scenario": "Detail pesanan tidak dapat dibuka sama sekali ketika customer-service sedang bermasalah.",
+            "trigger": "customer-service down, lambat, atau mengembalikan error saat `GET /customers/:customerId` dipanggil.",
+            "businessImpact": "Pelanggan dan tim CS tidak bisa melihat status pesanan, padahal data pesanan tersedia di database order-service."
+          },
+          {
+            "severity": "info",
+            "scenario": "Tidak ada log yang mencatat kegagalan pemanggilan customer-service.",
+            "trigger": "Error dari HTTP client langsung dilempar tanpa `catch` atau logging.",
+            "businessImpact": "Investigasi insiden lebih lambat karena penyebab 500 tidak langsung terlihat."
+          }
+        ],
+        "recommendations": [
+          {
+            "priority": 1,
+            "title": "Tangani kegagalan customer-service secara terkendali",
+            "problem": "Satu dependency yang gagal membuat seluruh detail pesanan tidak dapat diakses.",
+            "solution": "Bungkus pemanggilan dengan try/catch dan timeout; jika gagal, kembalikan data pesanan dengan `customer: null` dan penanda bahwa data pelanggan sementara tidak tersedia."
+          },
+          {
+            "priority": 2,
+            "title": "Tambahkan structured logging untuk pemanggilan eksternal",
+            "problem": "Error dari customer-service tidak tercatat.",
+            "solution": "Log URL, status code, durasi, dan `orderId` setiap kali pemanggilan gagal."
+          }
+        ],
+        "response": {
+          "successExample": {
+            "id": "7f1c2a9e-3b4d-4c1a-9e2f-1a2b3c4d5e6f",
+            "status": "PAID",
+            "total": 150000,
+            "customer": {
+              "name": "Budi",
+              "email": "budi@example.com"
+            },
+            "items": [
+              {
+                "sku": "SKU-001",
+                "qty": 2
+              }
+            ]
+          },
+          "success": "Objek pesanan beserta data pelanggan; `items` hanya ada jika `includeItems=true`. Lihat contoh di atas.",
+          "fields": [
+            {
+              "field": "id",
+              "type": "string (UUID)",
+              "description": "ID pesanan"
+            },
+            {
+              "field": "status",
+              "type": "string",
+              "description": "Status pesanan saat ini"
+            },
+            {
+              "field": "total",
+              "type": "number",
+              "description": "Total harga pesanan dalam Rupiah"
+            },
+            {
+              "field": "customer",
+              "type": "object",
+              "description": "Nama dan email pelanggan dari customer-service"
+            },
+            {
+              "field": "items",
+              "type": "array (opsional)",
+              "description": "Daftar barang; hanya ada jika includeItems=true"
+            }
+          ],
+          "errors": [
+            {
+              "httpStatus": "400",
+              "condition": "ID bukan UUID yang valid (faktual)",
+              "exampleMessage": "Validation failed (uuid is expected)"
+            },
+            {
+              "httpStatus": "401",
+              "condition": "Token tidak ada atau tidak valid (faktual)",
+              "exampleMessage": "Unauthorized"
+            },
+            {
+              "httpStatus": "404",
+              "condition": "Pesanan tidak ditemukan (faktual)",
+              "exampleMessage": "Order not found"
+            },
+            {
+              "httpStatus": "500",
+              "condition": "customer-service gagal (potensial, lihat Section 7)",
+              "exampleMessage": "Internal server error"
+            }
+          ],
+          "clientGuidance": "Tampilkan halaman 'pesanan tidak ditemukan' untuk 404. Untuk 500, tampilkan pesan coba lagi; error ini bisa terjadi sementara saat customer-service bermasalah."
         }
-      ],
-      "fallbackValues": [
-        {
-          "condition": "`includeItems` tidak dikirim",
-          "mechanism": "Default value di DTO (`includeItems = false`)",
-          "fallbackValue": "false",
-          "processEffect": "Daftar barang tidak diambil dan tidak ada di respons"
-        }
-      ],
-      "generalPropagation": [],
-      "unhandled": "Kegagalan pemanggilan customer-service tidak ditangani di source; analisis dampaknya ada di Section 7."
-    },
-    "risks": [
-      {
-        "severity": "amber",
-        "scenario": "Detail pesanan tidak dapat dibuka sama sekali ketika customer-service sedang bermasalah.",
-        "trigger": "customer-service down, lambat, atau mengembalikan error saat `GET /customers/:customerId` dipanggil.",
-        "businessImpact": "Pelanggan dan tim CS tidak bisa melihat status pesanan, padahal data pesanan tersedia di database order-service."
-      },
-      {
-        "severity": "info",
-        "scenario": "Tidak ada log yang mencatat kegagalan pemanggilan customer-service.",
-        "trigger": "Error dari HTTP client langsung dilempar tanpa `catch` atau logging.",
-        "businessImpact": "Investigasi insiden lebih lambat karena penyebab 500 tidak langsung terlihat."
       }
-    ],
-    "recommendations": [
-      {
-        "priority": 1,
-        "title": "Tangani kegagalan customer-service secara terkendali",
-        "problem": "Satu dependency yang gagal membuat seluruh detail pesanan tidak dapat diakses.",
-        "solution": "Bungkus pemanggilan dengan try/catch dan timeout; jika gagal, kembalikan data pesanan dengan `customer: null` dan penanda bahwa data pelanggan sementara tidak tersedia."
-      },
-      {
-        "priority": 2,
-        "title": "Tambahkan structured logging untuk pemanggilan eksternal",
-        "problem": "Error dari customer-service tidak tercatat.",
-        "solution": "Log URL, status code, durasi, dan `orderId` setiap kali pemanggilan gagal."
-      }
-    ],
-    "response": {
-      "successExample": {
-        "id": "7f1c2a9e-3b4d-4c1a-9e2f-1a2b3c4d5e6f",
-        "status": "PAID",
-        "total": 150000,
-        "customer": { "name": "Budi", "email": "budi@example.com" },
-        "items": [{ "sku": "SKU-001", "qty": 2 }]
-      },
-      "success": "Objek pesanan beserta data pelanggan; `items` hanya ada jika `includeItems=true`. Lihat contoh di atas.",
-      "fields": [
-        { "field": "id", "type": "string (UUID)", "description": "ID pesanan" },
-        { "field": "status", "type": "string", "description": "Status pesanan saat ini" },
-        { "field": "total", "type": "number", "description": "Total harga pesanan dalam Rupiah" },
-        { "field": "customer", "type": "object", "description": "Nama dan email pelanggan dari customer-service" },
-        { "field": "items", "type": "array (opsional)", "description": "Daftar barang; hanya ada jika includeItems=true" }
-      ],
-      "errors": [
-        { "httpStatus": "400", "condition": "ID bukan UUID yang valid (faktual)", "exampleMessage": "Validation failed (uuid is expected)" },
-        { "httpStatus": "401", "condition": "Token tidak ada atau tidak valid (faktual)", "exampleMessage": "Unauthorized" },
-        { "httpStatus": "404", "condition": "Pesanan tidak ditemukan (faktual)", "exampleMessage": "Order not found" },
-        { "httpStatus": "500", "condition": "customer-service gagal (potensial, lihat Section 7)", "exampleMessage": "Internal server error" }
-      ],
-      "clientGuidance": "Tampilkan halaman 'pesanan tidak ditemukan' untuk 404. Untuk 500, tampilkan pesan coba lagi; error ini bisa terjadi sementara saat customer-service bermasalah."
     }
-  }
+  ]
 }

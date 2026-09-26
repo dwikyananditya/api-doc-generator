@@ -12,9 +12,7 @@ const missing = (object, fields, prefix) =>
 
 const errors = [];
 
-errors.push(
-  ...missing(document, ["metadata", "endpoint", "sections"], "document"),
-);
+errors.push(...missing(document, ["metadata", "endpoints"], "document"));
 
 errors.push(
   ...missing(
@@ -32,119 +30,132 @@ errors.push(
   ),
 );
 
-errors.push(
-  ...missing(
-    document.endpoint,
-    ["method", "url", "controller", "serviceMethod"],
-    "endpoint",
-  ),
-);
+if (!Array.isArray(document.endpoints) || document.endpoints.length === 0)
+  errors.push("document.endpoints must contain at least one item");
 
-const sections = document.sections ?? {};
-const sectionNames = [
-  "overview",
-  "businessProcess",
-  "systemInteraction",
-  "database",
-  "externalApis",
-  "errorHandling",
-  "risks",
-  "recommendations",
-  "response",
-];
+const validateEntry = (entry, prefix) => {
+  errors.push(...missing(entry, ["endpoint", "sections"], prefix));
 
-errors.push(...missing(sections, sectionNames, "sections"));
-
-errors.push(
-  ...missing(
-    sections.overview,
-    ["controller", "routePrefix", "endpoints", "requestFields"],
-    "sections.overview",
-  ),
-);
-
-errors.push(
-  ...missing(
-    sections.businessProcess,
-    ["steps", "failureBehavior"],
-    "sections.businessProcess",
-  ),
-);
-
-errors.push(
-  ...missing(
-    sections.systemInteraction,
-    ["services", "sequence", "communication"],
-    "sections.systemInteraction",
-  ),
-);
-errors.push(
-  ...missing(sections.database, ["read", "write"], "sections.database"),
-);
-
-errors.push(
-  ...missing(
-    sections.errorHandling,
-    [
-      "businessRuleValidation",
-      "fallbackValues",
-      "generalPropagation",
-      "unhandled",
-    ],
-    "sections.errorHandling",
-  ),
-);
-
-errors.push(
-  ...missing(
-    sections.response,
-    ["success", "fields", "errors", "clientGuidance"],
-    "sections.response",
-  ),
-);
-
-if (
-  !Array.isArray(sections.businessProcess?.steps) ||
-  sections.businessProcess.steps.length === 0
-)
-  errors.push("sections.businessProcess.steps must contain at least one item");
-if (
-  !Array.isArray(sections.recommendations) ||
-  sections.recommendations.length === 0
-)
-  errors.push("sections.recommendations must contain at least one item");
-
-const endpointSummaries = sections.overview?.endpoints ?? [];
-endpointSummaries.forEach((item, index) =>
   errors.push(
     ...missing(
-      item,
-      ["method", "path", "handler", "queryDto"],
-      `sections.overview.endpoints[${index}]`,
+      entry.endpoint,
+      ["method", "url", "controller", "serviceMethod"],
+      `${prefix}.endpoint`,
     ),
-  ),
-);
+  );
 
-const risks = sections.risks ?? [];
-risks.forEach((item, index) =>
+  const sections = entry.sections ?? {};
+  const sectionNames = [
+    "overview",
+    "businessProcess",
+    "systemInteraction",
+    "database",
+    "externalApis",
+    "errorHandling",
+    "risks",
+    "recommendations",
+    "response",
+  ];
+
+  errors.push(...missing(sections, sectionNames, `${prefix}.sections`));
+
   errors.push(
     ...missing(
-      item,
-      ["severity", "scenario", "trigger", "businessImpact"],
-      `sections.risks[${index}]`,
+      sections.overview,
+      ["controller", "routePrefix", "endpoints", "requestFields"],
+      `${prefix}.sections.overview`,
     ),
-  ),
-);
+  );
 
-const recommendations = sections.recommendations ?? [];
-recommendations.forEach((item, index) =>
   errors.push(
     ...missing(
-      item,
-      ["priority", "title", "problem", "solution"],
-      `sections.recommendations[${index}]`,
+      sections.businessProcess,
+      ["steps", "failureBehavior"],
+      `${prefix}.sections.businessProcess`,
     ),
-  ),
+  );
+
+  errors.push(
+    ...missing(
+      sections.systemInteraction,
+      ["services", "sequence", "communication"],
+      `${prefix}.sections.systemInteraction`,
+    ),
+  );
+  errors.push(
+    ...missing(sections.database, ["read", "write"], `${prefix}.sections.database`),
+  );
+
+  errors.push(
+    ...missing(
+      sections.errorHandling,
+      [
+        "businessRuleValidation",
+        "fallbackValues",
+        "generalPropagation",
+        "unhandled",
+      ],
+      `${prefix}.sections.errorHandling`,
+    ),
+  );
+
+  errors.push(
+    ...missing(
+      sections.response,
+      ["success", "fields", "errors", "clientGuidance"],
+      `${prefix}.sections.response`,
+    ),
+  );
+
+  if (
+    !Array.isArray(sections.businessProcess?.steps) ||
+    sections.businessProcess.steps.length === 0
+  )
+    errors.push(
+      `${prefix}.sections.businessProcess.steps must contain at least one item`,
+    );
+  if (
+    !Array.isArray(sections.recommendations) ||
+    sections.recommendations.length === 0
+  )
+    errors.push(`${prefix}.sections.recommendations must contain at least one item`);
+
+  const endpointSummaries = sections.overview?.endpoints ?? [];
+  endpointSummaries.forEach((item, index) =>
+    errors.push(
+      ...missing(
+        item,
+        ["method", "path", "handler", "queryDto"],
+        `${prefix}.sections.overview.endpoints[${index}]`,
+      ),
+    ),
+  );
+
+  const risks = sections.risks ?? [];
+  risks.forEach((item, index) =>
+    errors.push(
+      ...missing(
+        item,
+        ["severity", "scenario", "trigger", "businessImpact"],
+        `${prefix}.sections.risks[${index}]`,
+      ),
+    ),
+  );
+
+  const recommendations = sections.recommendations ?? [];
+  recommendations.forEach((item, index) =>
+    errors.push(
+      ...missing(
+        item,
+        ["priority", "title", "problem", "solution"],
+        `${prefix}.sections.recommendations[${index}]`,
+      ),
+    ),
+  );
+};
+
+(document.endpoints ?? []).forEach((entry, index) =>
+  validateEntry(entry, `endpoints[${index}]`),
 );
 
 if (errors.length) {

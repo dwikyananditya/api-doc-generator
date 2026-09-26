@@ -132,7 +132,8 @@ const labels = {
   status: "Status",
   classification: "Klasifikasi",
   query: "Parameter query",
-  endpoint: "Endpoint",
+  url: "URL",
+  aliases: "Route lain",
 };
 
 const label = (value) =>
@@ -156,8 +157,9 @@ const paragraph = (value, size = 22, color = C.bodyText) =>
     spacing: { before: 60, after: 60 },
   });
 
-const heading = (value, level = HeadingLevel.HEADING_2) =>
+const heading = (value, level = HeadingLevel.HEADING_2, pageBreakBefore = false) =>
   new Paragraph({
+    pageBreakBefore,
     children: [
       new TextRun({
         text: value,
@@ -357,21 +359,25 @@ const renderValue = (key, value) => {
   return [paragraph(`${label(key)}: ${scalar(value)}`)];
 };
 
-const renderSection = (title, value) => [
-  heading(title, HeadingLevel.HEADING_1),
-  ...Object.entries(value ?? {}).flatMap(([key, item]) =>
-    renderValue(key, item),
-  ),
-];
+const renderSection = (title, value) => {
+  const body = !Array.isArray(value)
+    ? Object.entries(value ?? {}).flatMap(([key, item]) =>
+        renderValue(key, item),
+      )
+    : value.length
+      ? [arrayTable(value)].flat()
+      : [paragraph("Tidak ada.")];
+  return [heading(title, HeadingLevel.HEADING_2), ...body];
+};
 
-const endpoint = data.endpoint ?? {};
+const entries = data.endpoints ?? [];
 const service = data.metadata?.service ?? "API";
-const coverRows = Object.entries(data.metadata ?? {})
-  .map(([key, value]) => [label(key), scalar(value)])
-  .concat([
-    ["Endpoint", `${endpoint.method ?? "METHOD"} ${endpoint.url ?? "URL"}`],
-    ["Function", endpoint.functionName ?? "notDetected"],
-  ]);
+const documentName = data.metadata?.documentName ?? service;
+const coverRows = Object.entries(data.metadata ?? {}).map(([key, value]) => [
+  label(key),
+  scalar(value),
+]);
+const routeOf = (endpoint) => `${endpoint?.method ?? ""} ${endpoint?.url ?? ""}`;
 
 const cover = [
   new Paragraph({
@@ -402,7 +408,7 @@ const cover = [
   new Paragraph({
     children: [
       new TextRun({
-        text: `${endpoint.method ?? "METHOD"} ${endpoint.url ?? "URL"}  •  ${endpoint.functionName ?? "function"}`,
+        text: documentName,
         font: "Arial",
         size: 28,
         color: "666666",
@@ -412,6 +418,15 @@ const cover = [
     spacing: { after: 500 },
   }),
   propertyTable(coverRows),
+  heading(labels.endpoints, HeadingLevel.HEADING_3),
+  arrayTable(
+    entries.map(({ endpoint }, index) => ({
+      no: String(index + 1),
+      method: endpoint?.method,
+      url: endpoint?.url,
+      functionName: endpoint?.functionName ?? endpoint?.serviceMethod,
+    })),
+  ),
   new Paragraph({
     children: [
       new TextRun({
@@ -427,9 +442,18 @@ const cover = [
   }),
 ];
 
-const content = Object.entries(data.sections ?? {}).flatMap(([key, value]) =>
-  renderSection(label(key), value),
-);
+const content = entries.flatMap(({ endpoint = {}, sections = {} }, index) => [
+  heading(`${index + 1}. ${routeOf(endpoint)}`, HeadingLevel.HEADING_1, index > 0),
+  propertyTable(
+    Object.entries(endpoint).map(([key, value]) => [
+      label(key),
+      Array.isArray(value) ? value.join(", ") : scalar(value),
+    ]),
+  ),
+  ...Object.entries(sections).flatMap(([key, value]) =>
+    renderSection(label(key), value),
+  ),
+]);
 
 const header = new Header({
   children: [
@@ -443,7 +467,7 @@ const header = new Header({
         }),
         new TextRun({ text: "\t" }),
         new TextRun({
-          text: `${endpoint.method ?? ""} ${endpoint.url ?? ""}`,
+          text: documentName,
           font: "Arial",
           size: 18,
           color: C.blue,
