@@ -4,32 +4,28 @@
 
 ## Warna
 
-| Token      | Hex                 | Pemakaian            |
-| ---------- | ------------------- | -------------------- |
-| `darkBg`   | `1A1A2E`            | code block           |
-| `blue`     | `185FA5`            | H2, border, info     |
-| `darkBlue` | `2C3E50`            | H1, H3, table header |
-| `bodyText` | `1A1A2E`            | body                 |
-| `rowOdd`   | `F2F4F6`            | zebra table          |
-| `red`      | `A32D2D` / `FCEBEB` | critical             |
-| `amber`    | `BA7517` / `FAEEDA` | medium risk          |
-| `green`    | `3B6D11` / `EAF3DE` | correct behavior     |
-| `info`     | `185FA5` / `E6F1FB` | information          |
-| `purple`   | `534AB7` / `EEEDFE` | recommendation       |
+| Token      | Hex                 | Pemakaian                  |
+| ---------- | ------------------- | -------------------------- |
+| `darkBg`   | `1A1A2E`            | code block                 |
+| `blue`     | `185FA5`            | H2, garis H1, URL endpoint |
+| `darkBlue` | `2C3E50`            | H1, H3, table header       |
+| `bodyText` | `1A1A2E`            | body                       |
+| `muted`    | `666666`            | teks "tidak ada", cover    |
+| `rowOdd`   | `F2F4F6`            | zebra table                |
+| `info`     | `185FA5` / `E6F1FB` | callout catatan            |
 
 ## Typography
 
 | Element      | Font        | Size | Style                          |
 | ------------ | ----------- | ---- | ------------------------------ |
 | H1           | Arial       | 32   | bold, dark blue, bottom border |
-| H2           | Arial       | 28   | bold, blue                     |
-| H3           | Arial       | 24   | bold, dark blue                |
+| H2           | Arial       | 26   | bold, blue                     |
+| H3           | Arial       | 22   | bold, dark blue                |
 | Body         | Arial       | 22   | normal                         |
 | Table header | Arial       | 20   | bold, white on dark blue       |
 | Table cell   | Arial       | 20   | normal                         |
 | Inline code  | Courier New | 20   | `C7254E` on `F9F2F4`           |
 | Code block   | Courier New | 19   | dark background                |
-| Badge        | Arial       | 18   | bold                           |
 
 ## Page setup
 
@@ -46,11 +42,13 @@ const page = {
 
 1. Use `WidthType.DXA`, never percentage widths.
 2. Use `ShadingType.CLEAR`, never solid shading.
-3. Use numbering with `LevelFormat.BULLET`, never hardcoded bullet characters.
+3. Use numbering (`LevelFormat.DECIMAL` for `flow`, restarted per endpoint via `instance`), never hardcoded list characters.
 4. Use `tabStops` for header and footer alignment, never tables there.
 5. Gunakan page break hanya bila perpindahan konten memang memerlukannya; jangan memaksa setiap section ke halaman baru.
 6. Use separate paragraphs instead of `\n` inside `TextRun`.
 7. Make `columnWidths` sum exactly to the table width.
 8. Set `width` on every `TableCell` as well as its table column.
 9. Set page size explicitly; `docx` defaults are not US Letter.
-10. Validate the generated DOCX after rendering.
+10. Set `cantSplit` on body rows so a row never breaks across pages.
+11. Every table column has an Indonesian title for non-technical readers; empty lists render a sentence instead of an empty table.
+12. Validate the generated DOCX after rendering.

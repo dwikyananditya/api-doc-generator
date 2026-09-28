@@ -33,24 +33,13 @@ const C = {
   blue: "185FA5",
   darkBlue: "2C3E50",
   bodyText: "1A1A2E",
+  muted: "666666",
   white: "FFFFFF",
   rowOdd: "F2F4F6",
   border: "CCCCCC",
-  redBorder: "A32D2D",
-  redBg: "FCEBEB",
-  amberBorder: "BA7517",
-  amberBg: "FAEEDA",
-  greenBorder: "3B6D11",
-  greenBg: "EAF3DE",
+  code: "98D8A0",
   infoBorder: "185FA5",
   infoBg: "E6F1FB",
-  purpleBorder: "534AB7",
-  purpleBg: "EEEDFE",
-  codeKey: "5BBFFF",
-  codeStr: "98D8A0",
-  codeNum: "FAC775",
-  codeBool: "C4B5FD",
-  codeComment: "888888",
 };
 const W = 9360;
 
@@ -59,237 +48,89 @@ const page = {
   margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
 };
 
-const borders = {
-  top: { style: BorderStyle.SINGLE, size: 1, color: C.border },
-  bottom: { style: BorderStyle.SINGLE, size: 1, color: C.border },
-  left: { style: BorderStyle.SINGLE, size: 1, color: C.border },
-  right: { style: BorderStyle.SINGLE, size: 1, color: C.border },
-};
+const line = { style: BorderStyle.SINGLE, size: 1, color: C.border };
+const borders = { top: line, bottom: line, left: line, right: line };
+const none = { style: BorderStyle.NONE, size: 0, color: C.white };
 
-const text = (value) =>
-  typeof value === "string" ? value : JSON.stringify(value, null, 2);
+const run = (value, options = {}) =>
+  new TextRun({ text: String(value), font: "Arial", size: 22, color: C.bodyText, ...options });
 
-const labels = {
-  metadata: "Metadata",
-  endpoint: "Endpoint",
-  overview: "Ringkasan endpoint",
-  businessProcess: "Alur bisnis",
-  systemInteraction: "Interaksi sistem",
-  database: "Operasi database",
-  externalApis: "Integrasi API eksternal",
-  errorHandling: "Penanganan error",
-  risks: "Analisis risiko",
-  recommendations: "Rekomendasi perbaikan",
-  response: "Struktur respons",
-  controller: "Controller",
-  routePrefix: "Prefix rute",
-  endpoints: "Daftar endpoint",
-  requestFields: "Field request",
-  steps: "Langkah proses",
-  failureBehavior: "Perilaku saat gagal",
-  services: "Layanan",
-  sequence: "Urutan komunikasi",
-  communication: "Komunikasi",
-  read: "Operasi baca",
-  write: "Operasi tulis",
-  businessRuleValidation: "Validasi aturan bisnis",
-  fallbackValues: "Nilai fallback",
-  generalPropagation: "Propagasi error umum",
-  unhandled: "Belum ditangani",
-  clientGuidance: "Panduan client",
-  sourceEvidence: "Bukti sumber",
-  method: "Method",
-  path: "Path",
-  handler: "Handler",
-  queryDto: "DTO query",
-  field: "Field",
-  type: "Tipe",
-  required: "Wajib",
-  validation: "Validasi",
-  source: "Sumber",
-  execution: "Urutan eksekusi",
-  purpose: "Tujuan",
-  scenario: "Skenario",
-  trigger: "Pemicu",
-  businessImpact: "Dampak bisnis",
-  severity: "Severity",
-  priority: "Prioritas",
-  title: "Judul",
-  problem: "Masalah",
-  solution: "Solusi",
-  success: "Respons sukses",
-  fields: "Field respons",
-  errors: "Respons error",
-  auth: "Autentikasi",
-  contentType: "Content-Type",
-  successStatus: "Status sukses",
-  functionName: "Nama function",
-  serviceMethod: "Method service",
-  documentName: "Nama dokumen",
-  version: "Versi",
-  date: "Tanggal",
-  author: "Author",
-  status: "Status",
-  classification: "Klasifikasi",
-  query: "Parameter query",
-  url: "URL",
-  aliases: "Route lain",
-};
+const paragraph = (value, options = {}) =>
+  new Paragraph({ children: [run(value, options)], spacing: { before: 60, after: 60 } });
 
-const label = (value) =>
-  labels[String(value)] ??
-  String(value)
-    .replace(/([A-Z])/g, " $1")
-    .replace(/^./, (char) => char.toUpperCase());
-
-const scalar = (value) =>
-  value === null || value === undefined
-    ? "notDetected"
-    : typeof value === "object"
-      ? JSON.stringify(value)
-      : String(value);
-
-const paragraph = (value, size = 22, color = C.bodyText) =>
-  new Paragraph({
-    children: [
-      new TextRun({ text: scalar(value), font: "Arial", size, color }),
-    ],
-    spacing: { before: 60, after: 60 },
-  });
-
-const heading = (value, level = HeadingLevel.HEADING_2, pageBreakBefore = false) =>
+const heading = (value, level, pageBreakBefore = false) =>
   new Paragraph({
     pageBreakBefore,
+    heading: level,
     children: [
-      new TextRun({
-        text: value,
+      run(value, {
         bold: true,
-        font: "Arial",
-        size:
-          level === HeadingLevel.HEADING_1
-            ? 28
-            : level === HeadingLevel.HEADING_2
-              ? 24
-              : 22,
-        color: level === HeadingLevel.HEADING_1 ? C.blue : C.darkBlue,
+        size: level === HeadingLevel.HEADING_1 ? 32 : level === HeadingLevel.HEADING_2 ? 26 : 22,
+        color: level === HeadingLevel.HEADING_2 ? C.blue : C.darkBlue,
       }),
     ],
-    heading: level,
-    spacing: { before: 200, after: 120 },
+    border:
+      level === HeadingLevel.HEADING_1
+        ? { bottom: { style: BorderStyle.SINGLE, size: 6, color: C.blue, space: 4 } }
+        : undefined,
+    spacing: { before: level === HeadingLevel.HEADING_3 ? 160 : 280, after: 120 },
   });
 
-const bullet = (value) =>
+const listItem = (value, reference, instance) =>
   new Paragraph({
-    numbering: { reference: "bullets", level: 0 },
-    children: [
-      new TextRun({
-        text: scalar(value),
-        font: "Arial",
-        size: 22,
-        color: C.bodyText,
-      }),
-    ],
+    numbering: { reference, level: 0, instance },
+    children: [run(value)],
     spacing: { before: 40, after: 40 },
   });
 
-
-const cell = (value, header = false, odd = false) =>
+const cell = (value, width, { header = false, odd = false } = {}) =>
   new TableCell({
     borders,
+    width: { size: width, type: WidthType.DXA },
     margins: { top: 80, bottom: 80, left: 120, right: 120 },
-    width: { size: header ? 3000 : 6360, type: WidthType.DXA },
     verticalAlign: VerticalAlign.TOP,
-    shading: {
-      type: ShadingType.CLEAR,
-      fill: header ? C.darkBlue : odd ? C.rowOdd : C.white,
-    },
-    children: [
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: scalar(value),
-            font: "Arial",
-            size: 20,
-            bold: header,
-            color: header ? C.white : C.bodyText,
+    shading: { type: ShadingType.CLEAR, fill: header ? C.darkBlue : odd ? C.rowOdd : C.white },
+    children: String(value ?? "-")
+      .split("\n")
+      .map(
+        (text) =>
+          new Paragraph({
+            children: [run(text, { size: 20, bold: header, color: header ? C.white : C.bodyText })],
           }),
-        ],
-      }),
-    ],
+      ),
   });
-const propertyTable = (rows) =>
+
+// columns: [[title, width, (row) => value], ...]; widths must sum to W.
+const table = (columns, rows) =>
   new Table({
     width: { size: W, type: WidthType.DXA },
-    columnWidths: [3000, 6360],
-    rows: [
-      new TableRow({ children: [cell("Field", true), cell("Detail", true)] }),
-      ...rows.map(
-        ([key, value], index) =>
-          new TableRow({
-            children: [
-              cell(key, false, index % 2 === 1),
-              cell(value, false, index % 2 === 1),
-            ],
-          }),
-      ),
-    ],
-  });
-const arrayTable = (rows) => {
-  const keys = [
-    ...new Set(
-      rows.flatMap((row) =>
-        typeof row === "object" && row ? Object.keys(row) : [],
-      ),
-    ),
-  ];
-  if (!keys.length) return rows.map(bullet);
-  return new Table({
-    width: { size: W, type: WidthType.DXA },
-    columnWidths: keys.map(() => Math.floor(W / keys.length)),
+    columnWidths: columns.map(([, width]) => width),
     rows: [
       new TableRow({
-        children: keys.map(
-          (key) =>
-            new TableCell({
-              borders,
-              margins: { top: 80, bottom: 80, left: 120, right: 120 },
-              shading: { type: ShadingType.CLEAR, fill: C.darkBlue },
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: label(key),
-                      bold: true,
-                      font: "Arial",
-                      size: 20,
-                      color: C.white,
-                    }),
-                  ],
-                }),
-              ],
-            }),
-        ),
+        tableHeader: true,
+        children: columns.map(([title, width]) => cell(title, width, { header: true })),
       }),
       ...rows.map(
         (row, index) =>
           new TableRow({
-            children: keys.map(
-              (key) =>
-                new TableCell({
-                  borders,
-                  margins: { top: 80, bottom: 80, left: 120, right: 120 },
-                  shading: {
-                    type: ShadingType.CLEAR,
-                    fill: index % 2 ? C.rowOdd : C.white,
-                  },
-                  children: [paragraph(row?.[key] ?? "notDetected", 20)],
-                }),
-            ),
+            cantSplit: true,
+            children: columns.map(([, width, get]) => cell(get(row), width, { odd: index % 2 === 1 })),
           }),
       ),
     ],
   });
-};
+
+const keyValueTable = (pairs) =>
+  table(
+    [
+      ["Keterangan", 2600, ([key]) => key],
+      ["Isi", 6760, ([, value]) => value],
+    ],
+    pairs.filter(([, value]) => value !== undefined && value !== ""),
+  );
+
+const tableOrEmpty = (columns, rows, emptyText) =>
+  rows?.length ? table(columns, rows) : paragraph(emptyText, { italics: true, color: C.muted });
 
 const codeBlock = (value) =>
   new Table({
@@ -299,27 +140,16 @@ const codeBlock = (value) =>
       new TableRow({
         children: [
           new TableCell({
-            borders: {
-              top: { style: BorderStyle.NONE, size: 0, color: C.darkBg },
-              bottom: { style: BorderStyle.NONE, size: 0, color: C.darkBg },
-              left: { style: BorderStyle.NONE, size: 0, color: C.darkBg },
-              right: { style: BorderStyle.NONE, size: 0, color: C.darkBg },
-            },
+            width: { size: W, type: WidthType.DXA },
+            borders: { top: none, bottom: none, left: none, right: none },
             margins: { top: 120, bottom: 120, left: 200, right: 200 },
             shading: { type: ShadingType.CLEAR, fill: C.darkBg },
-            children: text(value)
+            children: (typeof value === "string" ? value : JSON.stringify(value, null, 2))
               .split("\n")
               .map(
-                (line) =>
+                (text) =>
                   new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: line,
-                        font: "Courier New",
-                        size: 19,
-                        color: C.codeStr,
-                      }),
-                    ],
+                    children: [new TextRun({ text, font: "Courier New", size: 19, color: C.code })],
                     spacing: { before: 20, after: 20 },
                   }),
               ),
@@ -329,154 +159,216 @@ const codeBlock = (value) =>
     ],
   });
 
+const callout = (value) =>
+  new Table({
+    width: { size: W, type: WidthType.DXA },
+    columnWidths: [W],
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: W, type: WidthType.DXA },
+            borders: {
+              top: none,
+              bottom: none,
+              right: none,
+              left: { style: BorderStyle.SINGLE, size: 24, color: C.infoBorder },
+            },
+            margins: { top: 100, bottom: 100, left: 200, right: 200 },
+            shading: { type: ShadingType.CLEAR, fill: C.infoBg },
+            children: [paragraph(value)],
+          }),
+        ],
+      }),
+    ],
+  });
 
-const renderValue = (key, value) => {
-  if (value === null || value === undefined)
-    return [paragraph(`${label(key)}: notDetected`)];
-  if (
-    key.toLowerCase().includes("json") ||
-    key.toLowerCase().includes("example")
-  )
-    return [heading(label(key), HeadingLevel.HEADING_3), codeBlock(value)];
+const spacer = () => new Paragraph({ children: [], spacing: { before: 60, after: 60 } });
 
-  if (Array.isArray(value))
-    return [
-      heading(label(key), HeadingLevel.HEADING_3),
-      ...(value.length && typeof value[0] === "object"
-        ? [arrayTable(value)]
-        : value.map((item) => bullet(item))),
-    ];
-  if (typeof value === "object")
-    return [
-      heading(label(key), HeadingLevel.HEADING_3),
-      propertyTable(
-        Object.entries(value).map(([childKey, childValue]) => [
-          label(childKey),
-          scalar(childValue),
-        ]),
-      ),
-    ];
-  return [paragraph(`${label(key)}: ${scalar(value)}`)];
+const fieldColumns = [
+  ["Field", 1800, (row) => row.name],
+  ["Nama mudah", 1800, (row) => row.label],
+  ["Jenis isi", 1400, (row) => row.type],
+  ["Wajib?", 1100, (row) => (row.required ? "Wajib" : "Opsional")],
+  ["Keterangan", 3260, (row) => row.description],
+];
+
+const route = (endpoint) => `${endpoint.method} ${endpoint.url}`;
+
+const renderEndpoint = (endpoint, index) => {
+  const { request, database, response } = endpoint;
+  const number = index + 1;
+  const hasExample = (value) => value !== null && value !== undefined && value !== "";
+
+  return [
+    heading(`${number}. ${endpoint.title}`, HeadingLevel.HEADING_1, index > 0),
+    paragraph(route(endpoint), { font: "Courier New", bold: true, color: C.blue }),
+
+    heading(`${number}.1 Ringkasan`, HeadingLevel.HEADING_2),
+    paragraph(endpoint.summary),
+    keyValueTable([
+      ["Method", endpoint.method],
+      ["URL", endpoint.url],
+      ["URL lain (alias)", endpoint.aliases?.join("\n")],
+      ["Perlu login?", endpoint.auth],
+      ["Lokasi kode", endpoint.handler],
+    ]),
+
+    heading(`${number}.2 Alur singkat`, HeadingLevel.HEADING_2),
+    ...endpoint.flow.map((step) => listItem(step, "steps", number)),
+
+    heading(`${number}.3 Data yang dikirim`, HeadingLevel.HEADING_2),
+    keyValueTable([
+      ["Format data", request.contentType],
+      ["Definisi (DTO)", request.dto],
+    ]),
+    heading("Parameter di URL (path)", HeadingLevel.HEADING_3),
+    tableOrEmpty(fieldColumns, request.pathParams, "Tidak ada parameter di path URL."),
+    heading("Parameter query (?nama=nilai)", HeadingLevel.HEADING_3),
+    tableOrEmpty(fieldColumns, request.queryParams, "Tidak ada parameter query."),
+    heading("Isi body (payload)", HeadingLevel.HEADING_3),
+    tableOrEmpty(fieldColumns, request.body, "Endpoint ini tidak menerima body."),
+    ...(hasExample(request.example)
+      ? [heading("Contoh request", HeadingLevel.HEADING_3), codeBlock(request.example)]
+      : []),
+
+    heading(`${number}.4 Service lain yang dipanggil`, HeadingLevel.HEADING_2),
+    tableOrEmpty(
+      [
+        ["Service", 1600, (row) => row.service],
+        ["Panggilan", 2600, (row) => row.call],
+        ["Tujuan", 2600, (row) => row.purpose],
+        ["Kode di service tujuan", 2560, (row) => row.handler],
+      ],
+      endpoint.downstream,
+      "Endpoint ini tidak memanggil service lain.",
+    ),
+
+    heading(`${number}.5 Data di database`, HeadingLevel.HEADING_2),
+    heading("Query yang dijalankan", HeadingLevel.HEADING_3),
+    tableOrEmpty(
+      [
+        ["Service", 1500, (row) => row.service],
+        ["Tabel", 1600, (row) => row.table],
+        ["Operasi", 1000, (row) => row.operation],
+        ["Kondisi / filter", 2400, (row) => row.filter],
+        ["Tujuan", 2860, (row) => row.purpose],
+      ],
+      database.queries,
+      "Endpoint ini tidak mengakses database secara langsung.",
+    ),
+    heading("Relasi antar tabel", HeadingLevel.HEADING_3),
+    tableOrEmpty(
+      [
+        ["Dari", 2200, (row) => row.from],
+        ["Ke", 2200, (row) => row.to],
+        ["Jenis relasi", 1700, (row) => row.kind],
+        ["Artinya", 3260, (row) => row.meaning],
+      ],
+      database.relations,
+      "Tidak ada relasi tabel yang dipakai endpoint ini.",
+    ),
+
+    heading(`${number}.6 Bentuk response`, HeadingLevel.HEADING_2),
+    paragraph(`Jika berhasil, sistem membalas dengan status ${response.status}.`),
+    ...(hasExample(response.example)
+      ? [heading("Contoh response sukses", HeadingLevel.HEADING_3), codeBlock(response.example)]
+      : []),
+    heading("Penjelasan field response", HeadingLevel.HEADING_3),
+    tableOrEmpty(
+      [
+        ["Field", 2600, (row) => row.name],
+        ["Jenis isi", 1600, (row) => row.type],
+        ["Arti", 5160, (row) => row.description],
+      ],
+      response.fields,
+      "Response tidak berisi data.",
+    ),
+    heading("Kemungkinan gagal", HeadingLevel.HEADING_3),
+    tableOrEmpty(
+      [
+        ["Status", 1000, (row) => row.status],
+        ["Kapan terjadi", 4360, (row) => row.condition],
+        ["Pesan", 4000, (row) => row.message],
+      ],
+      response.errors,
+      "Tidak ditemukan respons gagal yang ditangani secara eksplisit di source.",
+    ),
+
+    ...(endpoint.notes?.length
+      ? [
+          heading(`${number}.7 Catatan`, HeadingLevel.HEADING_2),
+          ...endpoint.notes.flatMap((note) => [callout(note), spacer()]),
+        ]
+      : []),
+  ];
 };
 
-const renderSection = (title, value) => {
-  const body = !Array.isArray(value)
-    ? Object.entries(value ?? {}).flatMap(([key, item]) =>
-        renderValue(key, item),
-      )
-    : value.length
-      ? [arrayTable(value)].flat()
-      : [paragraph("Tidak ada.")];
-  return [heading(title, HeadingLevel.HEADING_2), ...body];
-};
-
-const entries = data.endpoints ?? [];
-const service = data.metadata?.service ?? "API";
-const documentName = data.metadata?.documentName ?? service;
-const coverRows = Object.entries(data.metadata ?? {}).map(([key, value]) => [
-  label(key),
-  scalar(value),
-]);
-const routeOf = (endpoint) => `${endpoint?.method ?? ""} ${endpoint?.url ?? ""}`;
+const endpoints = data.endpoints;
+const service = data.metadata.service;
+const documentName = data.metadata.documentName;
 
 const cover = [
   new Paragraph({
-    children: [
-      new TextRun({
-        text: "API DOCUMENTATION",
-        bold: true,
-        font: "Arial",
-        size: 56,
-        color: C.darkBlue,
-      }),
-    ],
+    children: [run("API DOCUMENTATION", { bold: true, size: 56, color: C.darkBlue })],
     alignment: AlignmentType.CENTER,
     spacing: { before: 900, after: 240 },
   }),
   new Paragraph({
-    children: [
-      new TextRun({
-        text: service,
-        bold: true,
-        font: "Arial",
-        size: 36,
-        color: C.blue,
-      }),
-    ],
+    children: [run(service, { bold: true, size: 36, color: C.blue })],
     alignment: AlignmentType.CENTER,
   }),
   new Paragraph({
-    children: [
-      new TextRun({
-        text: documentName,
-        font: "Arial",
-        size: 28,
-        color: "666666",
-      }),
-    ],
+    children: [run(documentName, { size: 28, color: C.muted })],
     alignment: AlignmentType.CENTER,
     spacing: { after: 500 },
   }),
-  propertyTable(coverRows),
-  heading(labels.endpoints, HeadingLevel.HEADING_3),
-  arrayTable(
-    entries.map(({ endpoint }, index) => ({
-      no: String(index + 1),
-      method: endpoint?.method,
-      url: endpoint?.url,
-      functionName: endpoint?.functionName ?? endpoint?.serviceMethod,
-    })),
+  keyValueTable([
+    ["Nama dokumen", documentName],
+    ["Service", service],
+    ["Versi", data.metadata.version],
+    ["Tanggal", data.metadata.date],
+    ["Penulis", data.metadata.author],
+    ["Status", data.metadata.status],
+    ["Klasifikasi", data.metadata.classification],
+  ]),
+  heading("Service yang terlibat", HeadingLevel.HEADING_3),
+  table(
+    [
+      ["Service", 1900, (row) => row.name],
+      ["Repository", 1900, (row) => row.repo],
+      ["Dipanggil lewat", 2700, (row) => row.envVar || "-"],
+      ["Peran", 2860, (row) => row.role],
+    ],
+    data.services,
+  ),
+  heading("Daftar endpoint", HeadingLevel.HEADING_3),
+  table(
+    [
+      ["No", 600, (row) => row.no],
+      ["Method", 1000, (row) => row.method],
+      ["URL", 4160, (row) => row.url],
+      ["Fungsi", 3600, (row) => row.title],
+    ],
+    endpoints.map((endpoint, index) => ({ ...endpoint, no: index + 1 })),
   ),
   new Paragraph({
-    children: [
-      new TextRun({
-        text: "CONFIDENTIAL — Internal Engineering Use Only",
-        italics: true,
-        font: "Arial",
-        size: 18,
-        color: "666666",
-      }),
-    ],
+    children: [run("CONFIDENTIAL — Internal Engineering Use Only", { italics: true, size: 18, color: C.muted })],
     alignment: AlignmentType.CENTER,
     spacing: { before: 600 },
   }),
 ];
 
-const content = entries.flatMap(({ endpoint = {}, sections = {} }, index) => [
-  heading(`${index + 1}. ${routeOf(endpoint)}`, HeadingLevel.HEADING_1, index > 0),
-  propertyTable(
-    Object.entries(endpoint).map(([key, value]) => [
-      label(key),
-      Array.isArray(value) ? value.join(", ") : scalar(value),
-    ]),
-  ),
-  ...Object.entries(sections).flatMap(([key, value]) =>
-    renderSection(label(key), value),
-  ),
-]);
-
 const header = new Header({
   children: [
     new Paragraph({
       children: [
-        new TextRun({
-          text: `API Documentation  •  ${service}`,
-          font: "Arial",
-          size: 18,
-          color: "666666",
-        }),
-        new TextRun({ text: "\t" }),
-        new TextRun({
-          text: documentName,
-          font: "Arial",
-          size: 18,
-          color: C.blue,
-        }),
+        run(`API Documentation  •  ${service}`, { size: 18, color: C.muted }),
+        run("\t"),
+        run(documentName, { size: 18, color: C.blue }),
       ],
       tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
-      border: {
-        bottom: { style: BorderStyle.SINGLE, size: 6, color: C.blue, space: 4 },
-      },
+      border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: C.blue, space: 4 } },
     }),
   ],
 });
@@ -485,66 +377,47 @@ const footer = new Footer({
   children: [
     new Paragraph({
       children: [
-        new TextRun({
-          text: `Confidential  •  ${service}`,
-          font: "Arial",
-          size: 18,
-          color: "888888",
-        }),
-        new TextRun({ text: "\t" }),
-        new TextRun({
-          text: "Page ",
-          font: "Arial",
-          size: 18,
-          color: "888888",
-        }),
-        new TextRun({
-          children: [PageNumber.CURRENT],
-          font: "Arial",
-          size: 18,
-          color: "888888",
-        }),
+        run(`Confidential  •  ${service}`, { size: 18, color: "888888" }),
+        run("\t"),
+        run("Page ", { size: 18, color: "888888" }),
+        new TextRun({ children: [PageNumber.CURRENT], font: "Arial", size: 18, color: "888888" }),
       ],
       tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
-      border: {
-        top: { style: BorderStyle.SINGLE, size: 4, color: C.border, space: 4 },
-      },
+      border: { top: { style: BorderStyle.SINGLE, size: 4, color: C.border, space: 4 } },
     }),
   ],
 });
 
 const document = new Document({
-    numbering: {
-      config: [
-        {
-          reference: "bullets",
-          levels: [
-            {
-              level: 0,
-              format: LevelFormat.BULLET,
-              text: "•",
-              alignment: AlignmentType.LEFT,
-              style: { paragraph: { indent: { left: 540, hanging: 260 } } },
-            },
-          ],
-        },
-      ],
-    },
-    styles: {
-      default: {
-        document: { run: { font: "Arial", size: 22, color: C.bodyText } },
-      },
-    },
-    sections: [
-      { properties: { page }, children: cover },
+  numbering: {
+    config: [
       {
-        properties: { page },
-        headers: { default: header },
-        footers: { default: footer },
-        children: content,
+        reference: "steps",
+        levels: [
+          {
+            level: 0,
+            format: LevelFormat.DECIMAL,
+            text: "%1.",
+            alignment: AlignmentType.LEFT,
+            style: { paragraph: { indent: { left: 540, hanging: 360 } } },
+          },
+        ],
       },
     ],
-  });
+  },
+  styles: {
+    default: { document: { run: { font: "Arial", size: 22, color: C.bodyText } } },
+  },
+  sections: [
+    { properties: { page }, children: cover },
+    {
+      properties: { page },
+      headers: { default: header },
+      footers: { default: footer },
+      children: endpoints.flatMap(renderEndpoint),
+    },
+  ],
+});
 
 writeFileSync(output, await Packer.toBuffer(document));
 

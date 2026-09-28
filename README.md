@@ -1,6 +1,8 @@
 # API Doc Generator
 
-An [Agent Skill](https://agentskills.io) that analyzes a backend endpoint's source (NestJS, Node.js, Go, or .NET) and produces an Indonesian-language DOCX report: request fields, business flow, system and database interactions, error handling, risks, and recommendations.
+An [Agent Skill](https://agentskills.io) that analyzes a backend module's endpoints (NestJS, Node.js, Go, or .NET) and produces a plain-language Indonesian DOCX document for non-technical readers: request payload/DTO, query parameters, response shape, database queries, and table relations.
+
+In a microservice setup, run the agent from the folder that contains all service repositories. When an endpoint calls another service through an env var such as `${SVC_REPO_PROJECT_B}/api/v1/foo`, the skill maps it to the `repo-project-b` folder and documents the DTO, response, and queries from there. It follows only one hop; calls from that service onward are listed but not traced.
 
 It works with any agent that supports the `SKILL.md` format. Invoke it by name, or with a slash command where your agent supports one:
 

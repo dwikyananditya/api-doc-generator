@@ -1,226 +1,107 @@
 # API Documentation Specification
 
-> **WAJIB:** Semua isi dokumentasi (nilai teks di JSON) ditulis dalam **Bahasa Indonesia** dan dapat dipahami pembaca non-teknis. Key JSON tetap memakai nama dari schema.
+> **WAJIB:** Semua isi dokumentasi (nilai teks di JSON) ditulis dalam **Bahasa Indonesia** yang sederhana sehingga pembaca non-teknis paham. Key JSON tetap memakai nama dari schema.
 >
 > Contoh lengkap yang lolos validasi: `spec/example-api-document.json`. Aturan visual DOCX ada di `spec/DOCX_RENDERING_SPEC.md` dan hanya relevan untuk maintainer renderer.
 
-## Bahasa dan pembaca
-
-Dokumen dapat dibaca oleh orang dengan latar belakang teknis maupun non-teknis. Usahakan dampak dan arti bisnis mudah ditemukan, tanpa menghilangkan identifier teknis yang dibutuhkan sebagai referensi.
-
-Pertahankan identifier teknis seperti nama class, method, field, endpoint, environment variable, HTTP method, nama library, dan potongan source code dalam bentuk aslinya bila memang membantu penelusuran. Istilah teknis umum boleh dipertahankan jika lebih tepat, tetapi setiap istilah harus diberi konteks Bahasa Indonesia pada kemunculan pertamanya.
-
-Untuk request field, bila relevan, tambahkan:
-
-- nama yang lebih mudah dipahami selain identifier source
-- apakah field wajib diisi
-- jenis nilai dalam bahasa sederhana
-- aturan pengisian dan arti field bagi proses bisnis bila informasinya tersedia
-
-Detail implementasi seperti decorator, annotation, dan tipe source boleh ditampilkan bila membantu menjelaskan behavior, risiko, atau alasan sebuah kesimpulan. Jangan menganggap keberadaan detail teknis sebagai masalah dengan sendirinya; gunakan penilaian berdasarkan konteks source.
-
 ## Tujuan
 
-Analisis endpoint backend dan hasilkan dokumentasi API yang faktual, ringkas, dan siap dipakai tim engineering.
+Dokumen menjawab empat pertanyaan untuk setiap endpoint:
 
-Source dapat berupa NestJS, Node.js, Go, atau .NET, termasuk controller, route, service, DTO, repository, entity, database operation, validasi, dan HTTP client.
+1. **Apa yang harus dikirim?** Parameter path, parameter query, dan isi body (DTO/payload).
+2. **Apa yang dikembalikan?** Bentuk response sukses dan kemungkinan gagal.
+3. **Data apa yang dibaca atau diubah?** Query ke database dan tabelnya.
+4. **Bagaimana data saling terhubung?** Relasi antar tabel, termasuk antar service.
 
-Source code adalah satu-satunya sumber fakta. Jangan mengisi detail yang tidak ditemukan.
+Hal di luar itu (analisis risiko, rekomendasi perbaikan, diagram arsitektur) tidak dimasukkan.
 
-## Alur kerja
+## Bahasa
 
-1. Terima file atau folder source dan identifikasi semua endpoint di dalamnya, termasuk di semua subfolder/sub-module (atau hanya endpoint yang disebut pengguna). Satu target menghasilkan tepat satu JSON dan satu DOCX, sebanyak apa pun module di dalamnya; urutkan endpoint per module/subfolder.
-2. Tentukan root aplikasi, bukan folder feature atau module: ancestor terdekat dari target yang memiliki manifest project (`package.json`, `go.mod`, `*.csproj`, `*.sln`, `Cargo.toml`) dan tidak berada di luar root git. Jika tidak ada manifest, gunakan root git. Pada monorepo, hasilnya adalah folder aplikasi (mis. `apps/api`), bukan root monorepo.
-3. Ikuti import dan dependency langsung yang dibutuhkan setiap endpoint. Bagian yang dipakai bersama (guard, interceptor, error type, HTTP client) cukup dianalisis sekali.
-4. Batas analisis adalah `PROJECT_ROOT`. Jangan membuka repository lain (termasuk service downstream) atau konfigurasi deployment (helm, k8s, CI, `.env`). Pemanggilan ke service lain didokumentasikan dari sisi pemanggil: URL, method, parameter yang dikirim, field respons yang dipakai, dan efek jika gagal; catat bahwa internal service downstream tidak dianalisis.
-5. Buat `<PROJECT_ROOT>/docs/<target-name>.json` sesuai schema.
-6. Validasi JSON.
-7. Render JSON menjadi `<PROJECT_ROOT>/docs/<target-name>.docx`.
-8. Pastikan file DOCX ada dan tidak kosong.
+- Tulis kalimat pendek dengan kata sehari-hari. Hindari istilah seperti "controller memanggil service"; jelaskan apa yang terjadi bagi pengguna.
+- Identifier teknis (nama field, tabel, class, env var, HTTP method) tetap ditulis asli dengan backtick bila perlu, tetapi selalu didampingi penjelasan.
+- Jenis isi field memakai kata sehari-hari: `Teks`, `Angka`, `Angka bulat`, `Ya/Tidak`, `Tanggal`, `Tanggal dan jam`, `Daftar`, `Objek`. Tambahkan format bila penting, misalnya `Teks (UUID)`, `Teks, pilihan: A, B, C`, atau `Angka bulat, 1 sampai 100`.
+- Gunakan istilah yang sama secara konsisten di seluruh dokumen.
 
-Abaikan `node_modules`, build output, generated files, vendor, coverage, dan source yang tidak terkait endpoint.
+## Microservice dan penelusuran lintas repo
 
-## Aturan fakta
+Dokumen ditulis dari sudut pandang **client service target** (service yang path-nya diberikan pengguna).
 
-- Bedakan fakta implementasi, risiko, dan rekomendasi.
-- Catat path file dan simbol sumber bila tersedia.
-- Jangan menyimpulkan authentication, status code, transaction, retry, atau constraint tanpa bukti di source.
-- Jika sesuatu tidak ditemukan, boleh beri konteks tentang batas fakta agar pembaca tidak salah menafsirkan hasilnya.
-- Bedakan informasi yang tidak ditemukan, tidak berlaku, atau belum dapat dipastikan bila perbedaannya penting bagi pembaca.
-- Jangan menambahkan placeholder hanya untuk memenuhi schema. Array kosong boleh digunakan jika memang tidak ada behavior yang ditemukan.
-- Ulangi istilah yang sama secara konsisten. Jangan mengganti nama service, field, atau operation hanya untuk variasi gaya.
-- Usahakan setiap section menjawab `apa artinya bagi pengguna atau proses bisnis`, bukan hanya daftar class, method, decorator, atau library. Informasi teknis tetap boleh ditampilkan bila menjadi bukti atau membantu menjelaskan behavior.
+- Jika endpoint meneruskan request ke service lain (mis. `${SVC_REPO_PROJECT_B}/api/v1/foo`), buka repo service tersebut untuk mengambil DTO, response, query, dan relasi tabel yang sebenarnya.
+- Penelusuran hanya **satu tingkat**: panggilan dari repo B ke repo C dicatat di `downstream`, tetapi kodenya tidak dibuka.
+- Setiap query dan relasi diberi nama service pemiliknya supaya pembaca tahu data itu tersimpan di mana.
+- Jika repo tujuan tidak ditemukan atau tidak tersedia, dokumentasikan dari sisi pemanggil saja (URL, data yang dikirim, field yang dipakai) dan tambahkan catatan.
 
 ## Struktur dokumen
 
-Dokumen terdiri dari cover page, lalu satu bab per endpoint. Setiap bab diawali tabel detail endpoint dan berisi sembilan section berikut. Cover page memakai Word section terpisah; section konten mengalir secara compact tanpa page break paksa agar tidak menghasilkan area kosong.
+Dokumen terdiri dari cover page, lalu satu bab per endpoint.
 
 ### Cover page
 
-Tampilkan:
+Berisi metadata, tabel **service yang terlibat** (`services`), dan daftar endpoint.
 
-- `API DOCUMENTATION`
-- nama service
-- nama dokumen
-- tabel metadata: document name, service, version, date, author, status, classification
-- daftar endpoint: nomor, method, URL, nama function
-- `CONFIDENTIAL — Internal Engineering Use Only`
+### Per endpoint
 
-### 1. Endpoint overview
+| Bagian | Isi | Key JSON |
+| --- | --- | --- |
+| Ringkasan | 1–3 kalimat tentang kegunaan endpoint bagi pengguna, method, URL, alias, perlu login atau tidak, dan lokasi kode | `title`, `summary`, `method`, `url`, `aliases`, `auth`, `handler` |
+| Alur singkat | 3–7 langkah dalam bahasa awam sesuai urutan di source, termasuk kapan service lain dipanggil | `flow` |
+| Data yang dikirim | Format data, DTO, parameter path, parameter query, isi body, dan contoh request | `request` |
+| Service lain yang dipanggil | Panggilan HTTP ke service lain, tujuannya, dan lokasi handler di service tujuan | `downstream` |
+| Data di database | Query yang dijalankan dan relasi antar tabel | `database` |
+| Bentuk response | Status sukses, contoh response, penjelasan field, dan kemungkinan gagal | `response` |
+| Catatan | Hal yang tidak dapat dipastikan dari source (opsional) | `notes` |
 
-Tampilkan tabel:
+## Aturan per bagian
 
-- HTTP method
-- URL
-- controller atau route
-- service method
-- authentication
-- content type
-- success response code
+### `title` dan `summary`
 
-Tampilkan tabel request DTO:
+`title` adalah nama fungsi dalam bahasa awam (mis. `Lihat daftar pesanan`), bukan nama method. `summary` menjelaskan kegunaan endpoint dan, jika relevan, bahwa data sebenarnya diolah di service lain.
 
-- nama parameter dan nama yang lebih mudah dipahami
-- jenis data dalam bahasa sederhana
-- wajib atau opsional
-- aturan pengisian dalam bahasa manusia
-- business meaning atau arti parameter bagi proses bisnis
-- bukti source sebagai referensi teknis terpisah
+### `request`
 
-### 2. Business process
+- `contentType`: mis. `application/json`, `multipart/form-data`, atau `Tidak ada body (hanya parameter query)`.
+- `dto`: nama class/struct DTO beserta path file. Jika service target meneruskan data apa adanya, sebutkan DTO di service tujuan dan jelaskan hal itu.
+- `pathParams`, `queryParams`, `body`: setiap field berisi:
+  - `name`: identifier asli. Field bertingkat ditulis dengan titik (`address.city`) dan field dalam daftar dengan `[]` (`items[].productId`).
+  - `label`: nama yang mudah dipahami.
+  - `type`: jenis isi dalam kata sehari-hari.
+  - `required`: `true` jika wajib.
+  - `description`: aturan pengisian (dari decorator validasi, binding tag, atau data annotation), nilai default jika tidak diisi, dan arti field bagi proses bisnis.
+- `example`: contoh request (objek JSON untuk body, string untuk URL dengan query), atau `null` jika tidak relevan.
 
-Jelaskan langkah proses sesuai urutan source. Untuk setiap langkah jelaskan tindakan, alasan bisnis yang dapat dibuktikan, arti langkah bagi pengguna, dan hasil jika langkah gagal. Jangan menulis `Controller memanggil service` tanpa menjelaskan apa yang diminta pengguna dan data apa yang dihasilkan.
+### `downstream`
 
-Jika ada beberapa aturan validasi, gunakan tabel `Rule | Failure condition | Error | Business effect`.
+Satu baris untuk setiap panggilan HTTP ke service lain, termasuk panggilan tingkat kedua yang ditemukan di service tujuan.
 
-Jika ada dua atau lebih write operation tanpa transaction wrapper, tandai sebagai risiko red (lihat tabel severity di Section 7).
+- `call`: method dan URL seperti ditulis di source, mis. `GET ${SVC_REPO_PROJECT_B}/api/v1/orders`.
+- `purpose`: data apa yang diminta atau dikirim dan untuk apa.
+- `handler`: file dan simbol handler di service tujuan, atau `Tidak ditelusuri (panggilan tingkat kedua)`, atau `Repo tidak tersedia`.
 
-### 3. System interaction
+### `database`
 
-Tampilkan:
+- `queries`: satu baris per operasi database.
+  - `operation`: `Baca`, `Tambah`, `Ubah`, atau `Hapus`.
+  - `filter`: kondisi pencarian, urutan, batas/paging, atau kolom yang diisi/diubah, dalam bahasa awam dengan nama kolom asli.
+  - `purpose`: alasan bisnis query tersebut.
+- `relations`: relasi antar tabel yang dipakai endpoint.
+  - `from` dan `to`: `tabel.kolom (service)`.
+  - `kind`: `Satu ke satu`, `Satu ke banyak`, `Banyak ke satu`, `Banyak ke banyak (lewat tabel_x)`, atau `Referensi lewat API/ID, tanpa foreign key` untuk relasi lintas service.
+  - `meaning`: arti relasi dalam kalimat sehari-hari, termasuk konsekuensinya bila penting (mis. data di service lain bisa sudah terhapus).
 
-1. service, environment variable, role, dan tipe internal atau external
-2. pseudo-sequence diagram di code block
-3. arah komunikasi `From | To | Operation | Purpose`
+Sumber relasi: definisi entity/model (`@ManyToOne`, `@OneToMany`, `belongsTo`, tag GORM, navigation property EF), migration, atau join eksplisit di query. Jangan menebak relasi dari kemiripan nama kolom saja.
 
-Bedakan operasi concurrent dari sequential. Tandai dependency antar operasi.
+### `response`
 
-### 4. Database operations
+- `status`: kode status sukses.
+- `example`: contoh response sukses yang realistis sesuai struktur di source, atau `null` jika response kosong.
+- `fields`: penjelasan setiap field, dengan notasi `name` yang sama seperti field request.
+- `errors`: hanya respons gagal yang benar-benar ditangani di source (service target atau service tujuan yang diteruskan), termasuk 401/403 dari guard dan 400 dari validasi. Jelaskan di `condition` jika error berasal dari service tujuan.
 
-Pisahkan:
+### `notes`
 
-- READ: table, operation, lookup key, business purpose
-- WRITE: operation summary dan field detail
-- snapshot atau audit fields yang digunakan
+Isi hanya bila ada hal penting yang tidak dapat dipastikan, mis. repo tujuan tidak tersedia atau internal service tingkat kedua tidak ditelusuri. Gunakan array kosong jika tidak ada.
 
-Gunakan callout info untuk snapshot atau audit field yang penting.
-
-### 5. External API integration
-
-Buat satu tabel untuk setiap external HTTP call:
-
-`Endpoint | Query parameters | Execution order | Business purpose | Fields used | Failure effect`
-
-Jika call kedua bergantung pada hasil call pertama, tandai dependency tersebut dan gunakan callout red bila kegagalan dapat memutus proses utama.
-
-### 6. Error handling
-
-Section ini hanya berisi behavior yang benar-benar ditangani source saat ini.
-
-#### 6.1 Business rule validation
-
-Tabel: `Handled condition | Error message | Source location | HTTP response`.
-
-Masukkan hanya error eksplisit yang menghasilkan respons 4xx, misalnya NestJS `throw new BadRequestException(...)`, Go `http.Error(w, msg, http.StatusBadRequest)`, atau .NET `return NotFound(...)`.
-
-#### 6.2 Fallback values
-
-Tabel: `Condition | Mechanism | Fallback value | Process effect`.
-
-Masukkan hanya ternary, default value, nullish fallback, atau conditional fallback yang benar-benar ada.
-
-#### 6.3 General error propagation
-
-Tabel: `Mechanism | Behavior | Scope`.
-
-Dokumentasikan `catch`, rethrow, wrapper exception, dan propagation behavior yang ada.
-
-Akhiri section dengan catatan bahwa behavior yang belum ditangani dianalisis di Section 7.
-
-### 7. Risk analysis
-
-Analisis risiko arsitektur, bukan daftar error hipotetis. Setiap risiko memiliki tiga poin:
-
-- Skenario konkret
-- Trigger spesifik
-- Dampak bisnis
-
-Severity:
-
-| Type    | Gunakan untuk                                                                    |
-| ------- | -------------------------------------------------------------------------------- |
-| `red`   | no atomic transaction, unprotected null access, write race condition             |
-| `amber` | external cascade failure, missing schema validation, missing database constraint |
-| `info`  | snapshot gap, observability gap, minor maintainability issue                     |
-
-### 8. Improvement recommendations
-
-Buat minimal satu rekomendasi dan hingga lima atau lebih bila didukung bukti source; jangan menambah rekomendasi generik hanya untuk mencapai jumlah tertentu. Urutkan dari paling kritis (`priority` 1 = paling kritis). Setiap rekomendasi berisi masalah saat ini, solusi konkret, dan contoh code bila membantu.
-
-Evaluasi topik berikut berdasarkan bukti source:
-
-- atomic transaction
-- null check
-- database unique constraint
-- retry dan circuit breaker
-- structured logging
-- response schema validation
-- event-driven architecture atau caching
-
-Gunakan callout purple untuk perubahan arsitektur tingkat tinggi.
-
-### 9. Response structure
-
-Tampilkan:
-
-1. success response dalam JSON code block
-2. tabel response field: `Field | Type | Description`
-3. tabel error response: `HTTP status | Condition | Example message`
-4. panduan untuk frontend atau mobile client
-
-Error response harus berasal dari Section 6 dan risiko 500 yang masuk akal dari Section 7. Tandai mana yang faktual dan mana yang potensial.
-
-## JSON contract
-
-File `<PROJECT_ROOT>/docs/<target-name>.json` wajib memiliki bentuk dasar berikut:
-
-```json
-{
-  "metadata": {},
-  "endpoints": [
-    {
-      "endpoint": { "method": "", "url": "", "aliases": [] },
-      "sections": {
-        "overview": {},
-        "businessProcess": {},
-        "systemInteraction": {},
-        "database": {},
-        "externalApis": [],
-        "errorHandling": {},
-        "risks": [],
-        "recommendations": [],
-        "response": {}
-      }
-    }
-  ]
-}
-```
-
-Handler yang sama yang diekspos di beberapa route (misalnya `/capaian/...` dan `/web/capaian/...`) ditulis sebagai satu item; route lainnya dicatat di `endpoint.aliases` (contoh: `"GET /web/capaian/option-tanggal"`).
-
-Gunakan `schema/api-document.schema.json` untuk validasi struktur minimum. Gunakan nama folder target sebagai `<target-name>`; untuk target berupa file, gunakan nama file tanpa ekstensi. Satu target menghasilkan tepat satu file JSON dan satu DOCX berisi semua endpoint; jangan memecah output per endpoint. `PROJECT_ROOT` adalah root aplikasi/repository, bukan folder `src/modules/...` tempat source berada.
-
-### Metadata
+## Metadata dan services
 
 Metadata tidak berasal dari source, jadi gunakan nilai default berikut kecuali pengguna memberi nilai lain:
 
@@ -234,15 +115,8 @@ Metadata tidak berasal dari source, jadi gunakan nilai default berikut kecuali p
 | `status`         | `Draft`                                                               |
 | `classification` | `Internal`                                                            |
 
-### Nilai yang tidak ditemukan
+`services` mencantumkan service target dan setiap service yang dipanggil: `name`, `repo` (folder repo, atau `Tidak ditelusuri`/`Repo tidak tersedia`), `envVar` (string kosong untuk service target), dan `role` (perannya dalam satu kalimat).
 
-Field wajib yang tidak dapat diisi dari source ditulis sebagai kalimat faktual, bukan `null` atau placeholder, misalnya `Tidak ada (endpoint tidak menerima query)` untuk `queryDto` atau `Tidak ditemukan pengecekan autentikasi di source yang dianalisis` untuk `auth`. Untuk daftar yang memang kosong, gunakan array kosong.
+## Nilai yang tidak ditemukan
 
-## Section 6 boundary
-
-Section 6 documents only implemented behavior:
-
-- explicit 4xx errors (e.g. `BadRequestException`, `http.Error(..., 400)`, `return NotFound()`) belong in 6.1
-- ternary or default fallback belongs in 6.2
-- catch and rethrow behavior belongs in 6.3
-- missing handling belongs in Section 7
+Field wajib yang tidak dapat diisi dari source ditulis sebagai kalimat faktual, bukan `null` atau placeholder, misalnya `Tidak ditemukan pengecekan login di source yang dianalisis` untuk `auth`. Untuk daftar yang memang kosong, gunakan array kosong; renderer akan menampilkan kalimat "tidak ada" yang sesuai.
