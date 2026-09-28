@@ -19,13 +19,13 @@
       "name": "repo-project-b",
       "repo": "repo-project-b",
       "envVar": "SVC_REPO_PROJECT_B",
-      "role": "Service tujuan. Menyimpan dan mengolah data pesanan; kodenya ikut ditelusuri."
+      "role": "Service tujuan. Menyimpan dan mengolah data pesanan."
     },
     {
       "name": "repo-project-c",
-      "repo": "Tidak ditelusuri",
+      "repo": "repo-project-c",
       "envVar": "SVC_REPO_PROJECT_C",
-      "role": "Dipanggil oleh repo-project-b untuk data pelanggan. Hanya dicatat, tidak ditelusuri."
+      "role": "Dipanggil oleh repo-project-b untuk mengambil data pelanggan."
     }
   ],
   "endpoints": [
@@ -33,7 +33,9 @@
       "title": "Lihat daftar pesanan",
       "method": "GET",
       "url": "/orders",
-      "aliases": ["GET /web/orders"],
+      "aliases": [
+        "GET /web/orders"
+      ],
       "summary": "Menampilkan daftar pesanan milik pengguna yang sedang login, bisa difilter berdasarkan status dan dibagi per halaman. repo-project-a hanya meneruskan permintaan ke repo-project-b; data pesanan disimpan dan diolah di repo-project-b.",
       "auth": "Ya. Pengguna wajib login (guard `JwtAuthGuard` di `OrdersController`). ID pengguna diambil dari token, bukan dari request.",
       "handler": "repo-project-a/src/modules/orders/orders.controller.ts — `OrdersController.findAll`",
@@ -85,7 +87,7 @@
           "service": "repo-project-c",
           "call": "GET ${SVC_REPO_PROJECT_C}/api/v1/customers/:id (dipanggil oleh repo-project-b)",
           "purpose": "Mengambil nama pelanggan untuk ditampilkan di daftar pesanan.",
-          "handler": "Tidak ditelusuri (panggilan tingkat kedua)"
+          "handler": "-"
         }
       ],
       "database": {
@@ -140,27 +142,72 @@
               "createdAt": "2026-09-20T08:15:00Z"
             }
           ],
-          "meta": { "page": 1, "limit": 20, "total": 1 }
+          "meta": {
+            "page": 1,
+            "limit": 20,
+            "total": 1
+          }
         },
         "fields": [
-          { "name": "data", "type": "Daftar", "description": "Daftar pesanan di halaman ini." },
-          { "name": "data[].id", "type": "Teks (UUID)", "description": "Nomor unik pesanan." },
-          { "name": "data[].status", "type": "Teks", "description": "Status pesanan: PENDING (belum dibayar), PAID (sudah dibayar), CANCELLED (dibatalkan)." },
-          { "name": "data[].total", "type": "Angka", "description": "Total harga pesanan dalam Rupiah." },
-          { "name": "data[].itemCount", "type": "Angka", "description": "Jumlah barang dalam pesanan." },
-          { "name": "data[].customerName", "type": "Teks atau kosong (null)", "description": "Nama pelanggan dari repo-project-c. Kosong jika repo-project-c gagal dihubungi." },
-          { "name": "data[].createdAt", "type": "Tanggal dan jam", "description": "Waktu pesanan dibuat." },
-          { "name": "meta.total", "type": "Angka", "description": "Total seluruh pesanan yang cocok dengan filter, dipakai untuk menghitung jumlah halaman." }
+          {
+            "name": "data",
+            "type": "Daftar",
+            "description": "Daftar pesanan di halaman ini."
+          },
+          {
+            "name": "data[].id",
+            "type": "Teks (UUID)",
+            "description": "Nomor unik pesanan."
+          },
+          {
+            "name": "data[].status",
+            "type": "Teks",
+            "description": "Status pesanan: PENDING (belum dibayar), PAID (sudah dibayar), CANCELLED (dibatalkan)."
+          },
+          {
+            "name": "data[].total",
+            "type": "Angka",
+            "description": "Total harga pesanan dalam Rupiah."
+          },
+          {
+            "name": "data[].itemCount",
+            "type": "Angka",
+            "description": "Jumlah barang dalam pesanan."
+          },
+          {
+            "name": "data[].customerName",
+            "type": "Teks atau kosong (null)",
+            "description": "Nama pelanggan dari repo-project-c. Kosong jika repo-project-c gagal dihubungi."
+          },
+          {
+            "name": "data[].createdAt",
+            "type": "Tanggal dan jam",
+            "description": "Waktu pesanan dibuat."
+          },
+          {
+            "name": "meta.total",
+            "type": "Angka",
+            "description": "Total seluruh pesanan yang cocok dengan filter, dipakai untuk menghitung jumlah halaman."
+          }
         ],
         "errors": [
-          { "status": 401, "condition": "Pengguna belum login atau token tidak valid.", "message": "Unauthorized" },
-          { "status": 400, "condition": "`status`, `page`, atau `limit` di luar aturan (ditolak oleh repo-project-b dan diteruskan oleh repo-project-a).", "message": "status must be one of the following values: PENDING, PAID, CANCELLED" },
-          { "status": 502, "condition": "repo-project-b tidak dapat dihubungi atau membalas error 5xx.", "message": "Order service unavailable" }
+          {
+            "status": 401,
+            "condition": "Pengguna belum login atau token tidak valid.",
+            "message": "Unauthorized"
+          },
+          {
+            "status": 400,
+            "condition": "`status`, `page`, atau `limit` di luar aturan (ditolak oleh repo-project-b dan diteruskan oleh repo-project-a).",
+            "message": "status must be one of the following values: PENDING, PAID, CANCELLED"
+          },
+          {
+            "status": 502,
+            "condition": "repo-project-b tidak dapat dihubungi atau membalas error 5xx.",
+            "message": "Order service unavailable"
+          }
         ]
-      },
-      "notes": [
-        "Isi internal repo-project-c tidak ditelusuri. Yang diketahui hanya bahwa repo-project-b memanggilnya untuk mengambil nama pelanggan."
-      ]
+      }
     },
     {
       "title": "Simpan pesanan sebagai favorit",
@@ -197,7 +244,9 @@
             "description": "Nama yang mudah diingat, misalnya \"Belanja bulanan\". Jika tidak diisi, disimpan kosong."
           }
         ],
-        "example": { "alias": "Belanja bulanan" }
+        "example": {
+          "alias": "Belanja bulanan"
+        }
       },
       "downstream": [],
       "database": {
@@ -235,18 +284,45 @@
           "createdAt": "2026-09-28T10:00:00Z"
         },
         "fields": [
-          { "name": "id", "type": "Angka", "description": "Nomor unik data favorit." },
-          { "name": "orderId", "type": "Teks (UUID)", "description": "Pesanan yang difavoritkan." },
-          { "name": "alias", "type": "Teks atau kosong (null)", "description": "Nama favorit yang diberikan pengguna." },
-          { "name": "createdAt", "type": "Tanggal dan jam", "description": "Waktu favorit disimpan." }
+          {
+            "name": "id",
+            "type": "Angka",
+            "description": "Nomor unik data favorit."
+          },
+          {
+            "name": "orderId",
+            "type": "Teks (UUID)",
+            "description": "Pesanan yang difavoritkan."
+          },
+          {
+            "name": "alias",
+            "type": "Teks atau kosong (null)",
+            "description": "Nama favorit yang diberikan pengguna."
+          },
+          {
+            "name": "createdAt",
+            "type": "Tanggal dan jam",
+            "description": "Waktu favorit disimpan."
+          }
         ],
         "errors": [
-          { "status": 401, "condition": "Pengguna belum login atau token tidak valid.", "message": "Unauthorized" },
-          { "status": 400, "condition": "`id` bukan UUID atau `alias` lebih dari 50 karakter.", "message": "Validation failed (uuid is expected)" },
-          { "status": 409, "condition": "Pesanan sudah pernah difavoritkan oleh pengguna yang sama.", "message": "Order already in favorites" }
+          {
+            "status": 401,
+            "condition": "Pengguna belum login atau token tidak valid.",
+            "message": "Unauthorized"
+          },
+          {
+            "status": 400,
+            "condition": "`id` bukan UUID atau `alias` lebih dari 50 karakter.",
+            "message": "Validation failed (uuid is expected)"
+          },
+          {
+            "status": 409,
+            "condition": "Pesanan sudah pernah difavoritkan oleh pengguna yang sama.",
+            "message": "Order already in favorites"
+          }
         ]
-      },
-      "notes": []
+      }
     }
   ]
 }

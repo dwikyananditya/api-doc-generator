@@ -38,8 +38,6 @@ const C = {
   rowOdd: "F2F4F6",
   border: "CCCCCC",
   code: "98D8A0",
-  infoBorder: "185FA5",
-  infoBg: "E6F1FB",
 };
 const W = 9360;
 
@@ -159,32 +157,6 @@ const codeBlock = (value) =>
     ],
   });
 
-const callout = (value) =>
-  new Table({
-    width: { size: W, type: WidthType.DXA },
-    columnWidths: [W],
-    rows: [
-      new TableRow({
-        children: [
-          new TableCell({
-            width: { size: W, type: WidthType.DXA },
-            borders: {
-              top: none,
-              bottom: none,
-              right: none,
-              left: { style: BorderStyle.SINGLE, size: 24, color: C.infoBorder },
-            },
-            margins: { top: 100, bottom: 100, left: 200, right: 200 },
-            shading: { type: ShadingType.CLEAR, fill: C.infoBg },
-            children: [paragraph(value)],
-          }),
-        ],
-      }),
-    ],
-  });
-
-const spacer = () => new Paragraph({ children: [], spacing: { before: 60, after: 60 } });
-
 const fieldColumns = [
   ["Field", 1800, (row) => row.name],
   ["Nama mudah", 1800, (row) => row.label],
@@ -295,12 +267,6 @@ const renderEndpoint = (endpoint, index) => {
       "Tidak ditemukan respons gagal yang ditangani secara eksplisit di source.",
     ),
 
-    ...(endpoint.notes?.length
-      ? [
-          heading(`${number}.7 Catatan`, HeadingLevel.HEADING_2),
-          ...endpoint.notes.flatMap((note) => [callout(note), spacer()]),
-        ]
-      : []),
   ];
 };
 

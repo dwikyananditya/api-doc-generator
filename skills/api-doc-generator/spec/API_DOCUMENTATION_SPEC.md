@@ -21,6 +21,7 @@ Hal di luar itu (analisis risiko, rekomendasi perbaikan, diagram arsitektur) tid
 - Identifier teknis (nama field, tabel, class, env var, HTTP method) tetap ditulis asli dengan backtick bila perlu, tetapi selalu didampingi penjelasan.
 - Jenis isi field memakai kata sehari-hari: `Teks`, `Angka`, `Angka bulat`, `Ya/Tidak`, `Tanggal`, `Tanggal dan jam`, `Daftar`, `Objek`. Tambahkan format bila penting, misalnya `Teks (UUID)`, `Teks, pilihan: A, B, C`, atau `Angka bulat, 1 sampai 100`.
 - Gunakan istilah yang sama secara konsisten di seluruh dokumen.
+- **Dokumen hanya berisi fakta tentang API, bukan tentang proses analisis.** Jangan menulis cara pemetaan env var ke repo ditentukan, repo atau file yang tidak dibuka/ditelusuri, nilai env atau file `.env` yang tidak diperiksa, maupun temuan sampingan seperti bug atau ketidakcocokan format. Hal seperti itu cukup disampaikan di laporan chat.
 
 ## Microservice dan penelusuran lintas repo
 
@@ -28,8 +29,9 @@ Dokumen ditulis dari sudut pandang **client service target** (service yang path-
 
 - Jika endpoint meneruskan request ke service lain (mis. `${SVC_REPO_PROJECT_B}/api/v1/foo`), buka repo service tersebut untuk mengambil DTO, response, query, dan relasi tabel yang sebenarnya.
 - Penelusuran hanya **satu tingkat**: panggilan dari repo B ke repo C dicatat di `downstream`, tetapi kodenya tidak dibuka.
+- Nama service selalu nama folder repo yang sebenarnya. Untuk service tingkat kedua, cari foldernya dengan pemetaan nama yang sama (tanpa membuka kode); jika tidak ada folder yang cocok, tulis nama env var apa adanya. Jangan mengarang nama service.
 - Setiap query dan relasi diberi nama service pemiliknya supaya pembaca tahu data itu tersimpan di mana.
-- Jika repo tujuan tidak ditemukan atau tidak tersedia, dokumentasikan dari sisi pemanggil saja (URL, data yang dikirim, field yang dipakai) dan tambahkan catatan.
+- Jika repo tujuan tidak tersedia, dokumentasikan dari sisi pemanggil saja (URL, data yang dikirim, field yang dipakai).
 
 ## Struktur dokumen
 
@@ -49,7 +51,6 @@ Berisi metadata, tabel **service yang terlibat** (`services`), dan daftar endpoi
 | Service lain yang dipanggil | Panggilan HTTP ke service lain, tujuannya, dan lokasi handler di service tujuan | `downstream` |
 | Data di database | Query yang dijalankan dan relasi antar tabel | `database` |
 | Bentuk response | Status sukses, contoh response, penjelasan field, dan kemungkinan gagal | `response` |
-| Catatan | Hal yang tidak dapat dipastikan dari source (opsional) | `notes` |
 
 ## Aturan per bagian
 
@@ -75,7 +76,7 @@ Satu baris untuk setiap panggilan HTTP ke service lain, termasuk panggilan tingk
 
 - `call`: method dan URL seperti ditulis di source, mis. `GET ${SVC_REPO_PROJECT_B}/api/v1/orders`.
 - `purpose`: data apa yang diminta atau dikirim dan untuk apa.
-- `handler`: file dan simbol handler di service tujuan, atau `Tidak ditelusuri (panggilan tingkat kedua)`, atau `Repo tidak tersedia`.
+- `handler`: file dan simbol handler di service tujuan, atau `-` untuk panggilan tingkat kedua dan repo yang tidak tersedia.
 
 ### `database`
 
@@ -97,10 +98,6 @@ Sumber relasi: definisi entity/model (`@ManyToOne`, `@OneToMany`, `belongsTo`, t
 - `fields`: penjelasan setiap field, dengan notasi `name` yang sama seperti field request.
 - `errors`: hanya respons gagal yang benar-benar ditangani di source (service target atau service tujuan yang diteruskan), termasuk 401/403 dari guard dan 400 dari validasi. Jelaskan di `condition` jika error berasal dari service tujuan.
 
-### `notes`
-
-Isi hanya bila ada hal penting yang tidak dapat dipastikan, mis. repo tujuan tidak tersedia atau internal service tingkat kedua tidak ditelusuri. Gunakan array kosong jika tidak ada.
-
 ## Metadata dan services
 
 Metadata tidak berasal dari source, jadi gunakan nilai default berikut kecuali pengguna memberi nilai lain:
@@ -115,8 +112,8 @@ Metadata tidak berasal dari source, jadi gunakan nilai default berikut kecuali p
 | `status`         | `Draft`                                                               |
 | `classification` | `Internal`                                                            |
 
-`services` mencantumkan service target dan setiap service yang dipanggil: `name`, `repo` (folder repo, atau `Tidak ditelusuri`/`Repo tidak tersedia`), `envVar` (string kosong untuk service target), dan `role` (perannya dalam satu kalimat).
+`services` mencantumkan service target dan setiap service yang dipanggil: `name`, `repo` (nama folder repo, atau `-` jika tidak ada folder yang cocok), `envVar` (string kosong untuk service target), dan `role` (perannya dalam satu kalimat).
 
 ## Nilai yang tidak ditemukan
 
-Field wajib yang tidak dapat diisi dari source ditulis sebagai kalimat faktual, bukan `null` atau placeholder, misalnya `Tidak ditemukan pengecekan login di source yang dianalisis` untuk `auth`. Untuk daftar yang memang kosong, gunakan array kosong; renderer akan menampilkan kalimat "tidak ada" yang sesuai.
+Field wajib yang tidak punya bukti di source ditulis sebagai fakta sederhana tentang API, bukan `null`, placeholder, atau komentar tentang analisis, misalnya `Tidak perlu login` untuk `auth` jika tidak ada guard. Untuk daftar yang memang kosong, gunakan array kosong; renderer akan menampilkan kalimat "tidak ada" yang sesuai.

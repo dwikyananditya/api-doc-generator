@@ -39,7 +39,7 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["title", "method", "url", "aliases", "summary", "auth", "handler", "flow", "request", "downstream", "database", "response", "notes"],
+        "required": ["title", "method", "url", "aliases", "summary", "auth", "handler", "flow", "request", "downstream", "database", "response"],
         "additionalProperties": false,
         "properties": {
           "title": { "type": "string", "minLength": 1 },
@@ -147,8 +147,7 @@
                 }
               }
             }
-          },
-          "notes": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+          }
         }
       }
     }

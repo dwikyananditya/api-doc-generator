@@ -36,10 +36,10 @@ Turn a backend module's source into one API document that a non-technical reader
 5. **Analyze the target service.** Start at each route handler and follow what it needs: DTO/validation, service, repository/entity/ORM model or raw SQL, HTTP client, and guards. Skip `node_modules`, build output, generated code, and unrelated modules. Trace shared pieces (guards, HTTP client wrapper, base entities) once and reuse the findings.
 6. **Resolve outgoing HTTP calls to repositories.** A call whose base URL comes from an env var or config key — e.g. `${SVC_REPO_PROJECT_B}/api/v1/foo`, `process.env.SVC_REPO_PROJECT_B`, `configService.get('SVC_REPO_PROJECT_B')`, `os.Getenv(...)`, `IConfiguration[...]` — points at another service. Follow the HTTP client wrapper if there is one to find the env var and path.
    - **Map the env var to a folder by name.** Drop affixes such as `SVC_`, `SERVICE_`, `_URL`, `_HOST`, `_BASE_URL`, `_API`; lowercase; turn `_` into `-` (`SVC_REPO_PROJECT_B` → `repo-project-b`). Look for that folder directly under `WORKSPACE_ROOT`, first as an exact match, then as a unique folder whose name contains it.
-   - **When there is no match or several matches**, collect every unresolved env var and ask the user once, in a single question, which folder each maps to. If the user says the repo is not available, document the call from the caller's side only and add a note.
+   - **When there is no match or several matches**, collect every unresolved env var and ask the user once, in a single question, which folder each maps to. If the user says the repo is not available, document the call from the caller's side only.
    - Do not read `.env`, helm, k8s, terraform, or CI files to resolve names.
 7. **Analyze the called service — one hop only.** In the mapped repository, find the handler for the called method and path, accounting for global prefixes, controller prefixes, and API versioning. From it, document the request DTO and validation, the response shape, the database queries, and the table relations, exactly as in step 5.
-   - **Do not follow that service's own outgoing calls.** If repo B calls repo C, list the call in `downstream` with `handler` set to `Tidak ditelusuri (panggilan tingkat kedua)` and move on.
+   - **Do not follow that service's own outgoing calls.** If repo B calls repo C, list the call in `downstream` with `handler` set to `-` and move on. Still resolve C's name with the same folder mapping (a folder lookup only, no code opened); if no folder matches, use the env var name exactly as written. Never make up a service name.
    - Tag every query and relation with the service that owns it.
    - **Request fields come from what the target service accepts.** If the target passes the body or query through untouched, use the called service's DTO and say so in `request.dto`.
    - **The response is what the target service returns.** If it returns the called service's response as-is, use that shape. If it reshapes the data, document the final shape.
@@ -58,13 +58,15 @@ Turn a backend module's source into one API document that a non-technical reader
     ```
 
     Confirm the DOCX exists and is not empty.
-11. **Report** the target, the project root, the services traced (with each env var → folder mapping), the JSON and DOCX paths, the validation result, and any facts that could not be determined from source.
+11. **Report** in chat: the target, the project root, the services traced (with each env var → folder mapping), the JSON and DOCX paths, the validation result, and any facts that could not be determined from source.
 
 ## Rules
 
+- **The document states facts about the API, never about the analysis.** Do not write how a mapping was decided, which repos or files were not opened or traced, which env values or `.env` files were not checked, or side observations such as bugs and inconsistencies. Put anything the user needs to know about the analysis in the final report (step 11) instead.
+- Service names are always the real repository folder names. Never derive a name from an env var when a matching folder exists.
 - Source code is the only source of facts. Never infer authentication, status codes, validation rules, table names, or relations without evidence in source. `handler`, `request.dto`, and `downstream[].handler` carry the file and symbol so engineers can check.
 - Write field types in everyday words (`Teks`, `Angka`, `Ya/Tidak`, `Tanggal dan jam`, `Daftar`), adding the format when it matters (`Teks (UUID)`, `Angka bulat, 1 sampai 100`).
 - Every request and response field explains what it means for the user or the business process, not just its type.
 - Relations come from entity/model definitions (`@ManyToOne`, `belongsTo`, GORM tags, EF navigation properties), migrations, or explicit joins in queries. A cross-service link through an ID stored without a foreign key is a relation too: mark it as `Referensi lewat API/ID, tanpa foreign key`.
-- When a required value cannot be found, write a factual sentence (e.g. `Tidak ditemukan pengecekan login di source yang dianalisis`), never `null` or a made-up value. Use an empty array when a list genuinely has no entries.
+- When a required value has no evidence in source, state the plain fact about the API (e.g. `Tidak perlu login` when no guard applies), never `null`, a made-up value, or a remark about the analysis. Use an empty array when a list genuinely has no entries.
 - If the target contains no HTTP endpoint, or a route cannot be traced to a handler, stop and tell the user what was found instead of producing a partial document.

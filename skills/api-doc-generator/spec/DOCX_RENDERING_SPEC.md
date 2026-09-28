@@ -12,7 +12,6 @@
 | `bodyText` | `1A1A2E`            | body                       |
 | `muted`    | `666666`            | teks "tidak ada", cover    |
 | `rowOdd`   | `F2F4F6`            | zebra table                |
-| `info`     | `185FA5` / `E6F1FB` | callout catatan            |
 
 ## Typography
 
