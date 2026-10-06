@@ -28,8 +28,10 @@ Hal di luar itu (analisis risiko, rekomendasi perbaikan, diagram arsitektur) tid
 Dokumen ditulis dari sudut pandang **client service target** (service yang path-nya diberikan pengguna).
 
 - Jika endpoint meneruskan request ke service lain (mis. `${SVC_REPO_PROJECT_B}/api/v1/foo`), buka repo service tersebut untuk mengambil DTO, response, query, dan relasi tabel yang sebenarnya.
-- Penelusuran hanya **satu tingkat**: panggilan dari repo B ke repo C dicatat di `downstream`, tetapi kodenya tidak dibuka.
-- Nama service selalu nama folder repo yang sebenarnya. Untuk service tingkat kedua, cari foldernya dengan pemetaan nama yang sama (tanpa membuka kode); jika tidak ada folder yang cocok, tulis nama env var apa adanya. Jangan mengarang nama service.
+- Kedalaman penelusuran dipilih pengguna:
+  - **Single Layer** (`single`, default): hanya service target (proxy) dan **satu** service yang dipanggil langsung. Panggilan dari repo B ke repo C dicatat di `downstream`, tetapi kodenya tidak dibuka.
+  - **Deep Analysis** (`deep`): semua service yang terjangkau ditelusuri berantai (B → C → D …) sampai handler terakhir yang tidak memanggil service lain. DTO, response, query, dan relasi setiap service didokumentasikan. Pasangan service + endpoint yang sudah ditelusuri tidak dibuka ulang.
+- Nama service selalu nama folder repo yang sebenarnya. Untuk service yang tidak dibuka kodenya (tingkat kedua pada mode `single`), cari foldernya dengan pemetaan nama yang sama; jika tidak ada folder yang cocok, tulis nama env var apa adanya. Jangan mengarang nama service.
 - Setiap query dan relasi diberi nama service pemiliknya supaya pembaca tahu data itu tersimpan di mana.
 - Jika repo tujuan tidak tersedia, dokumentasikan dari sisi pemanggil saja (URL, data yang dikirim, field yang dipakai).
 
@@ -72,11 +74,11 @@ Berisi metadata, tabel **service yang terlibat** (`services`), dan daftar endpoi
 
 ### `downstream`
 
-Satu baris untuk setiap panggilan HTTP ke service lain, termasuk panggilan tingkat kedua yang ditemukan di service tujuan.
+Satu baris untuk setiap panggilan HTTP ke service lain, termasuk panggilan lanjutan yang ditemukan di service tujuan.
 
-- `call`: method dan URL seperti ditulis di source, mis. `GET ${SVC_REPO_PROJECT_B}/api/v1/orders`.
+- `call`: method dan URL seperti ditulis di source, mis. `GET ${SVC_REPO_PROJECT_B}/api/v1/orders`. Untuk panggilan yang tidak dilakukan oleh service target, tambahkan `(dipanggil oleh <service-pemanggil>)`.
 - `purpose`: data apa yang diminta atau dikirim dan untuk apa.
-- `handler`: file dan simbol handler di service tujuan, atau `-` untuk panggilan tingkat kedua dan repo yang tidak tersedia.
+- `handler`: file dan simbol handler di service tujuan, atau `-` untuk panggilan yang tidak ditelusuri (tingkat kedua pada mode `single`) dan repo yang tidak tersedia.
 
 ### `database`
 

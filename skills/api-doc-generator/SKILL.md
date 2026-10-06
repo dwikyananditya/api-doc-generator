@@ -1,6 +1,6 @@
 ---
 name: api-doc-generator
-description: Analyze the endpoints in a backend source file or module (NestJS, Node.js, Go, or .NET) and produce a single plain-language Indonesian DOCX document covering, for each endpoint, the request payload/DTO, query parameters, response shape, database queries and table relations. Follows HTTP calls one hop into sibling microservice repositories (e.g. `${SVC_REPO_PROJECT_B}/api/v1/foo`) to find the real DTOs, responses and queries. Use when the user invokes the api-doc-generator skill (e.g. `/api-doc-generator <path>`) or asks for an API documentation document/report of an endpoint from its source code. Not for OpenAPI/Swagger specs, README files, or inline code comments.
+description: Analyze the endpoints in a backend source file or module (NestJS, Node.js, Go, or .NET) and produce a single plain-language Indonesian DOCX document covering, for each endpoint, the request payload/DTO, query parameters, response shape, database queries and table relations. Follows HTTP calls into sibling microservice repositories (e.g. `${SVC_REPO_PROJECT_B}/api/v1/foo`) to find the real DTOs, responses and queries, either one hop (`single`, default) or through every service in the chain (`deep`). Use when the user invokes the api-doc-generator skill (e.g. `/api-doc-generator <path> [--depth single|deep]`) or asks for an API documentation document/report of an endpoint from its source code. Not for OpenAPI/Swagger specs, README files, or inline code comments.
 compatibility: Node.js plus bun, pnpm, or npm to install the `docx` dependency. No office suite required.
 ---
 
@@ -13,6 +13,17 @@ Turn a backend module's source into one API document that a non-technical reader
 **Write for non-technical readers, in Bahasa Indonesia.** Short sentences, everyday words, and the business meaning of every field. Technical identifiers (field, class, table, env var, HTTP method) stay in their original form so engineers can trace them, but always sit next to a plain explanation.
 
 **The document describes what the client of the target service sends and receives.** When the target only forwards a request to another service, the real DTO, response, and queries live in that other service, so they are documented from there.
+
+## Analysis depth
+
+The user picks how far cross-service calls are traced:
+
+| Depth | Trigger | What is traced |
+| --- | --- | --- |
+| `single` (default) | `--depth single`, "single layer", or nothing said | The target service (proxy) plus **one hop**: the service it calls directly. Calls made by that service are listed in `downstream` but not opened. |
+| `deep` | `--depth deep`, "deep", "deep analysis", "analisis mendalam", "sampai ke logic terdalam" | The target service plus **every service reachable** through outgoing HTTP calls, recursively, until a service makes no further calls. Every hop's DTO, response, queries and relations are documented. |
+
+If the user does not state a depth, use `single` without asking.
 
 `RUNTIME_ROOT` is this skill's directory. Run scripts with absolute paths, e.g. `node <RUNTIME_ROOT>/scripts/validate.mjs`.
 
@@ -30,17 +41,21 @@ Turn a backend module's source into one API document that a non-technical reader
    - `<target-name>`: the folder name, or the filename without extension.
    - `PROJECT_ROOT`: the nearest ancestor of the target with a project manifest (`package.json`, `go.mod`, `*.csproj`, `*.sln`, `Cargo.toml`) that is inside the git root; fall back to the git root. In a monorepo this is the app folder (e.g. `apps/api`), never `src/` or a feature module.
    - `WORKSPACE_ROOT`: the folder holding all the service repositories — the current working directory when the target's repository is inside it, otherwise the parent folder of the target's git root.
+   - `DEPTH`: `single` or `deep`, per [Analysis depth](#analysis-depth).
 2. **Collect endpoints.** Find every endpoint anywhere under the target, recursively, unless the user named specific ones. Each endpoint is one item in `endpoints`; keep endpoints from the same module/subfolder next to each other. When the same handler is exposed under several routes (e.g. `/capaian/...` and `/web/capaian/...`), write one item and list the other routes in `aliases`.
 3. **Check for existing output.** Only the exact files `<PROJECT_ROOT>/docs/<target-name>.json` and `.docx` count. If they exist, ask before overwriting. Other files in `docs/` are not a reason to ask: leave them untouched and list them in the final report as possibly obsolete.
 4. **Install dependencies** if `<RUNTIME_ROOT>/node_modules/docx` does not exist: `node <RUNTIME_ROOT>/scripts/init.mjs`.
 5. **Analyze the target service.** Start at each route handler and follow what it needs: DTO/validation, service, repository/entity/ORM model or raw SQL, HTTP client, and guards. Skip `node_modules`, build output, generated code, and unrelated modules. Trace shared pieces (guards, HTTP client wrapper, base entities) once and reuse the findings.
 6. **Resolve outgoing HTTP calls to repositories.** A call whose base URL comes from an env var or config key — e.g. `${SVC_REPO_PROJECT_B}/api/v1/foo`, `process.env.SVC_REPO_PROJECT_B`, `configService.get('SVC_REPO_PROJECT_B')`, `os.Getenv(...)`, `IConfiguration[...]` — points at another service. Follow the HTTP client wrapper if there is one to find the env var and path.
    - **Map the env var to a folder by name.** Drop affixes such as `SVC_`, `SERVICE_`, `_URL`, `_HOST`, `_BASE_URL`, `_API`; lowercase; turn `_` into `-` (`SVC_REPO_PROJECT_B` → `repo-project-b`). Look for that folder directly under `WORKSPACE_ROOT`, first as an exact match, then as a unique folder whose name contains it.
-   - **When there is no match or several matches**, collect every unresolved env var and ask the user once, in a single question, which folder each maps to. If the user says the repo is not available, document the call from the caller's side only.
+   - **When there is no match or several matches**, collect every unresolved env var and ask the user once, in a single question, which folder each maps to. In `deep` mode, new env vars can surface at every hop; batch the ones found at each hop into one question rather than asking per call. If the user says the repo is not available, document the call from the caller's side only.
    - Do not read `.env`, helm, k8s, terraform, or CI files to resolve names.
-7. **Analyze the called service — one hop only.** In the mapped repository, find the handler for the called method and path, accounting for global prefixes, controller prefixes, and API versioning. From it, document the request DTO and validation, the response shape, the database queries, and the table relations, exactly as in step 5.
-   - **Do not follow that service's own outgoing calls.** If repo B calls repo C, list the call in `downstream` with `handler` set to `-` and move on. Still resolve C's name with the same folder mapping (a folder lookup only, no code opened); if no folder matches, use the env var name exactly as written. Never make up a service name.
+7. **Analyze the called services.** In the mapped repository, find the handler for the called method and path, accounting for global prefixes, controller prefixes, and API versioning. From it, document the request DTO and validation, the response shape, the database queries, and the table relations, exactly as in step 5. How far to go depends on `DEPTH`:
+   - **`single`: one hop only. Do not follow that service's own outgoing calls.** If repo B calls repo C, list the call in `downstream` with `handler` set to `-` and move on. Still resolve C's name with the same folder mapping (a folder lookup only, no code opened); if no folder matches, use the env var name exactly as written. Never make up a service name.
+   - **`deep`: follow every outgoing call recursively.** If repo B calls repo C, resolve C (step 6), open its handler, and document it the same way; repeat for C's calls, and so on, until a handler makes no further HTTP calls. Every hop gets a `downstream` row with its real `handler`. Track visited `service + method + path` pairs and do not re-open one already traced (this also stops call cycles such as B → C → B); reuse the earlier findings instead. Use `-` as the `handler` only when the repo is not available.
+   - For any call not made by the target service itself, append `(dipanggil oleh <caller-service>)` to `call` so readers can follow the chain.
    - Tag every query and relation with the service that owns it.
+   - `flow` describes the whole chain in plain words, in source order, naming each service when it is called.
    - **Request fields come from what the target service accepts.** If the target passes the body or query through untouched, use the called service's DTO and say so in `request.dto`.
    - **The response is what the target service returns.** If it returns the called service's response as-is, use that shape. If it reshapes the data, document the final shape.
 8. **Write** `<PROJECT_ROOT>/docs/<target-name>.json` following the spec and example. Fill metadata with the defaults in the spec, and list every service involved in `services`.
@@ -58,7 +73,7 @@ Turn a backend module's source into one API document that a non-technical reader
     ```
 
     Confirm the DOCX exists and is not empty.
-11. **Report** in chat: the target, the project root, the services traced (with each env var → folder mapping), the JSON and DOCX paths, the validation result, and any facts that could not be determined from source.
+11. **Report** in chat: the target, the project root, the analysis depth used, the services traced (with each env var → folder mapping), the JSON and DOCX paths, the validation result, and any facts that could not be determined from source.
 
 ## Rules
 
