@@ -1,30 +1,33 @@
 # API Doc Generator
 
-An [Agent Skill](https://agentskills.io) that analyzes a backend module's endpoints (NestJS, Node.js, Go, or .NET) and produces a plain-language Indonesian DOCX document for non-technical readers: request payload/DTO, query parameters, response shape, database queries, and table relations.
+[Agent Skill](https://agentskills.io) yang membaca endpoint di modul backend (NestJS, Node.js, Go, atau .NET) lalu menulis dokumen DOCX berbahasa Indonesia yang mudah dipahami: request, response, query database, dan relasi tabel.
 
-In a microservice setup, run the agent from the folder that contains all service repositories. When an endpoint calls another service through an env var such as `${SVC_REPO_PROJECT_B}/api/v1/foo`, the skill maps it to the `repo-project-b` folder and documents the DTO, response, and queries from there. How far it follows those calls is set by the analysis depth:
+Dibuat untuk project backend di [GO-Bimbel](https://github.com/GO-Bimbel).
 
-- `single` (default) — **Single Layer**: the target (proxy) plus the one service it calls. Calls from that service onward are listed but not traced.
-- `deep` — **Deep Analysis**: every service in the chain is traced recursively down to the last handler, documenting each one's DTOs, responses, queries, and relations.
+## Instalasi
 
-It works with any agent that supports the `SKILL.md` format. Invoke it by name, or with a slash command where your agent supports one:
+Butuh Node.js dan salah satu dari bun, pnpm, atau npm. Install lewat CLI [skills.sh](https://skills.sh):
 
-```text
-/api-doc-generator path/to/target
-/api-doc-generator path/to/target --depth deep
+```sh
+npx skills add dwikyananditya/api-doc-generator
 ```
 
-Asking in plain words ("deep analysis", "analisis mendalam") works too.
+Tambahkan `-g` untuk install di semua project, atau `-a claude-code` untuk memilih agent. Update dengan `npx skills update`, hapus dengan `npx skills remove api-doc-generator`.
 
-Output is written to the application root's `docs/` folder as `<target-name>.json` (the analyzed data) and `<target-name>.docx` (the rendered document).
+Dependency `docx` ter-install otomatis saat pertama kali dijalankan.
 
-## Layout
+## Cara pakai
 
-| Path | Purpose |
-| --- | --- |
-| `skills/api-doc-generator/SKILL.md` | Workflow and rules for the agent |
-| `skills/api-doc-generator/spec/API_DOCUMENTATION_SPEC.md` | Content rules for each section |
-| `skills/api-doc-generator/spec/example-api-document.json` | Complete valid example |
-| `skills/api-doc-generator/spec/DOCX_RENDERING_SPEC.md` | Styling rules for the renderer |
-| `skills/api-doc-generator/schema/api-document.schema.json` | JSON structure contract |
-| `skills/api-doc-generator/scripts/` | `init`, `validate`, and `generate` scripts |
+Jalankan agent dari folder yang berisi semua repo service, lalu:
+
+```text
+/api-doc-generator path/ke/target
+/api-doc-generator path/ke/target --depth deep
+```
+
+- `single` (default): service target ditambah satu service yang dipanggilnya.
+- `deep`: semua service dalam rantai panggilan, sampai handler terakhir.
+
+Hasilnya disimpan di `<app-root>/docs/<nama-target>.json` dan `.docx`.
+
+Alur lengkapnya ada di [`skills/api-doc-generator/SKILL.md`](skills/api-doc-generator/SKILL.md).
