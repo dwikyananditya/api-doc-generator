@@ -9,7 +9,7 @@ Dibuat untuk project backend di [GO-Bimbel](https://github.com/GO-Bimbel).
 Butuh Node.js dan salah satu dari bun, pnpm, atau npm. Install lewat CLI [skills.sh](https://skills.sh):
 
 ```sh
-npx skills add dwikyananditya/api-doc-generator
+npx skills add GO-Bimbel/api-doc-generator
 ```
 
 Tambahkan `-g` untuk install di semua project, atau `-a claude-code` untuk memilih agent. Update dengan `npx skills update`, hapus dengan `npx skills remove api-doc-generator`.
