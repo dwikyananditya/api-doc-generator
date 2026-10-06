@@ -3,16 +3,19 @@ import { spawnSync } from "node:child_process";
 
 const root = new URL("..", import.meta.url).pathname;
 const managers = [
-  ["bun", "bun.lockb"],
-  ["pnpm", "pnpm-lock.yaml"],
-  ["npm", "package-lock.json"],
+  ["bun", ["bun.lock", "bun.lockb"]],
+  ["pnpm", ["pnpm-lock.yaml"]],
+  ["npm", ["package-lock.json"]],
 ];
+const installed = ([manager]) =>
+  spawnSync(manager, ["--version"], { stdio: "ignore" }).status === 0;
+const available = managers.filter(installed);
 
+// Prefer the manager matching the lockfile, but only if it is installed.
 const selected =
-  managers.find(([_, lock]) => existsSync(`${root}/${lock}`))?.[0] ??
-  managers.find(([manager]) =>
-    spawnSync("which", [manager], { stdio: "ignore" }),
-  )?.[0];
+  available.find(([_, locks]) =>
+    locks.some((lock) => existsSync(`${root}/${lock}`)),
+  )?.[0] ?? available[0]?.[0];
 
 if (!selected)
   throw new Error(
